@@ -1,0 +1,241 @@
+@import "tailwindcss";
+
+/* ── Typography ─────────────────────────────────────── */
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  code, kbd, pre, .font-mono {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+
+  /* ── Custom Scrollbar (dark LIGAPRO theme) ── */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0f172a;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #334155;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #CCFF00;
+  }
+
+  /* ── Selection highlight ── */
+  ::selection {
+    background-color: #CCFF0033;
+    color: #CCFF00;
+  }
+}
+
+/* ── Custom animations ──────────────────────────────── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(204,255,0,0); }
+  50%       { box-shadow: 0 0 20px 4px rgba(204,255,0,0.25); }
+}
+
+.animate-fade-in-up { animation: fadeInUp 0.35s ease both; }
+.animate-shimmer    { animation: shimmer 2.5s linear infinite; background-size: 200% auto; }
+.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+
+/* ── LIGAPRO LIGHT MODE THEME (EXTREME SOOTHING WARM LINEN & SEPIA PAPER) ── */
+:root.light {
+  /* Slate variables override for Tailwind v4 - Warm Linen & Sepia Paper palette */
+  --color-slate-950: #f2ede4; /* Warm linen/cardstock background - completely glare-free */
+  --color-slate-900: #faf8f5; /* Warm alabaster/off-white for content cards */
+  --color-slate-850: #e5dfd3; /* Soft warm borders */
+  --color-slate-800: #ded7cb;
+  --color-slate-700: #cfc6b7;
+  --color-slate-600: #b5a996;
+  --color-slate-550: #6e6556;
+  --color-slate-500: #6e6556;
+  --color-slate-450: #6e6556;
+  --color-slate-405: #50483c;
+  --color-slate-400: #50483c; /* Secondary text - warm sandy cocoa */
+  --color-slate-350: #3e352a;
+  --color-slate-300: #3e352a; /* Primary text - rich warm espresso/sepia charcoal */
+  --color-slate-250: #2b251d;
+  --color-slate-200: #2b251d;
+  --color-slate-100: #2b251d;
+
+  /* Custom overrides for logistical blocks */
+  --color-slate-905: #ded7cb;
+  --color-slate-855: #e5dfd3;
+
+  color-scheme: light;
+}
+
+/* Specific light overrides for premium aesthetic */
+.light body {
+  background-color: #f2ede4 !important;
+  color: #2b251d !important;
+}
+
+.light header {
+  background-color: #faf8f5 !important;
+  border-color: #e5dfd3 !important;
+}
+.light header .text-white, .light header .text-slate-100, .light header .text-slate-200 {
+  color: #2b251d !important;
+}
+.light header .text-slate-300, .light header .text-slate-400 {
+  color: #6e6556 !important;
+}
+.light header #user-profile-btn {
+  background-color: #faf8f5 !important;
+  border-color: #e5dfd3 !important;
+}
+.light header #user-profile-btn:hover {
+  border-color: #cfc6b7 !important;
+}
+.light header #user-profile-btn .text-slate-100 {
+  color: #2b251d !important;
+}
+.light header #theme-toggle-btn, .light header #notifications-btn {
+  background-color: #e5dfd3 !important;
+  color: #50483c !important;
+}
+.light header #theme-toggle-btn:hover, .light header #notifications-btn:hover {
+  background-color: #cfc6b7 !important;
+  color: #2b251d !important;
+}
+
+/* Sidebar premium overrides */
+.light aside {
+  background-color: #faf8f5 !important;
+  border-color: #e5dfd3 !important;
+}
+.light aside button {
+  color: #6e6556 !important;
+}
+.light aside button:hover {
+  background-color: #f2ede4 !important;
+  color: #2b251d !important;
+}
+.light aside button.bg-slate-900 {
+  background-color: #e5dfd3 !important;
+  color: #2b251d !important;
+  border-color: #cfc6b7 !important;
+}
+
+/* Main app content and inputs overrides */
+.light main {
+  background-color: rgba(242, 237, 228, 0.4) !important;
+}
+.light input, .light select, .light textarea {
+  background-color: #ffffff !important;
+  border-color: #cfc6b7 !important;
+  color: #2b251d !important;
+}
+.light input::placeholder {
+  color: #b5a996 !important;
+}
+.light table {
+  border-color: #e5dfd3 !important;
+}
+.light table th {
+  color: #6e6556 !important;
+  border-color: #e5dfd3 !important;
+}
+.light table td {
+  color: #3e352a !important;
+  border-color: #f2ede4 !important;
+}
+.light table tr:hover {
+  background-color: #f2ede4 !important;
+}
+
+/* Fix text colors that are hardcoded as white or light text */
+.light .text-white {
+  color: #2b251d !important;
+}
+.light .text-slate-200 {
+  color: #3e352a !important;
+}
+.light .text-slate-100 {
+  color: #2b251d !important;
+}
+.light .text-slate-300 {
+  color: #6e6556 !important;
+}
+.light .text-slate-400 {
+  color: #6e6556 !important;
+}
+
+/* Keep accent details on yellow or red badges - Customized to Elegant Cobalt Blue for Light Mode (Escaped standard selectors) */
+.light .bg-\[\#CCFF00\] {
+  background-color: #1d4ed8 !important;
+  color: #ffffff !important;
+}
+.light .bg-\[\#CCFF00\] .text-slate-950, 
+.light .bg-\[\#CCFF00\] .text-slate-900, 
+.light .bg-\[\#CCFF00\] span,
+.light .bg-\[\#CCFF00\] svg {
+  color: #ffffff !important;
+}
+.light .text-\[\#CCFF00\] {
+  color: #1d4ed8 !important; /* Elegant Cobalt Blue contrast */
+}
+.light .border-\[\#CCFF00\] {
+  border-color: #1d4ed8 !important;
+}
+
+/* Translucent backdrops in light mode */
+.light .bg-\[\#CCFF00\]\/10 {
+  background-color: rgba(29, 78, 216, 0.08) !important;
+}
+.light .bg-\[\#CCFF00\]\/15 {
+  background-color: rgba(29, 78, 216, 0.15) !important;
+}
+.light .bg-\[\#CCFF00\]\/30 {
+  background-color: rgba(29, 78, 216, 0.25) !important;
+}
+
+/* Translucent borders in light mode */
+.light .border-\[\#CCFF00\]\/25 {
+  border-color: rgba(29, 78, 216, 0.25) !important;
+}
+
+/* Hover states */
+.light .bg-\[\#CCFF00\]:hover, 
+.light button.bg-\[\#CCFF00\]:hover {
+  background-color: #1e40af !important;
+  color: #ffffff !important;
+}
+
+/* Dropdown list fixes */
+.light .bg-slate-950 {
+  background-color: #ffffff !important;
+}
+.light .border-slate-800, .light .border-slate-850, .light .border-slate-855, .light .border-slate-900 {
+  border-color: #e5dfd3 !important;
+}
+
+/* Scrollbar in Light Mode */
+.light ::-webkit-scrollbar-track {
+  background: #f2ede4 !important;
+}
+.light ::-webkit-scrollbar-thumb {
+  background: #cfc6b7 !important;
+}
+.light ::-webkit-scrollbar-thumb:hover {
+  background: #1d4ed8 !important;
+}
