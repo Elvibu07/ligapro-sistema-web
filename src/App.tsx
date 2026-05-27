@@ -33,6 +33,7 @@ import PositionsView from "./components/PositionsView";
 import FixtureView from "./components/FixtureView";
 import PostponementsView from "./components/PostponementsView";
 import MatchSheetsView from "./components/MatchSheetsView";
+import FanView from "./components/FanView";
 
 // Loading skeleton component
 function LoadingSkeleton() {
@@ -235,6 +236,15 @@ export default function App() {
           <SecuritySettingsView
             currentUser={currentUser}
             onUpdateProfile={updateProfile}
+          />
+        );
+      case "fans":
+        return (
+          <FanView
+            clubs={clubs}
+            players={players}
+            matches={matches}
+            stadiums={stadiums}
           />
         );
       default:
