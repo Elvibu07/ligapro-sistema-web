@@ -119,6 +119,7 @@ export default function App() {
       <LoginPage
         onLogin={login}
         onRegister={register}
+        onOAuthLogin={loginWithOAuth}
         loading={authLoading}
         error={authError}
         onClearError={() => setAuthError(null)}
