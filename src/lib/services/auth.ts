@@ -4,7 +4,7 @@ export interface AuthUser {
   id: string;
   email: string;
   name: string;
-  role: 'Administrador General' | 'Registrador de Clubes' | 'Auditor Disciplinario' | 'Coordinador VAR' | 'Comisión Arbitral';
+  role: 'Administrador General' | 'Registrador de Clubes' | 'Auditor Disciplinario' | 'Coordinador VAR' | 'Comisión Arbitral' | 'Fans / Admiradores';
   avatar: string;
 }
 
@@ -15,7 +15,8 @@ export async function signIn(email: string, password: string): Promise<{ user: A
     'clubes@ligapro.ec': { name: 'Ing. María José Flores', role: 'Registrador de Clubes' },
     'disciplina@ligapro.ec': { name: 'Dr. Roberto Ochoa', role: 'Auditor Disciplinario' },
     'var@ligapro.ec': { name: 'Ing. Wilson Ávila', role: 'Coordinador VAR' },
-    'arbitros@ligapro.ec': { name: 'Ltc. Nestor Pitana', role: 'Comisión Arbitral' }
+    'arbitros@ligapro.ec': { name: 'Ltc. Nestor Pitana', role: 'Comisión Arbitral' },
+    'fan@ligapro.ec': { name: 'Hincha Admirador', role: 'Fans / Admiradores' }
   };
 
   const isDemoEmail = email.toLowerCase() in demoAccounts;
@@ -256,7 +257,8 @@ export async function updateProfile(
       'clubes@ligapro.ec': { name: 'Ing. María José Flores', role: 'Registrador de Clubes' },
       'disciplina@ligapro.ec': { name: 'Dr. Roberto Ochoa', role: 'Auditor Disciplinario' },
       'var@ligapro.ec': { name: 'Ing. Wilson Ávila', role: 'Coordinador VAR' },
-      'arbitros@ligapro.ec': { name: 'Ltc. Nestor Pitana', role: 'Comisión Arbitral' }
+      'arbitros@ligapro.ec': { name: 'Ltc. Nestor Pitana', role: 'Comisión Arbitral' },
+      'fan@ligapro.ec': { name: 'Hincha Admirador', role: 'Fans / Admiradores' }
     };
     const isDemoEmail = email.toLowerCase() in demoAccounts;
 

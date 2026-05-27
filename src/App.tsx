@@ -64,6 +64,13 @@ export default function App() {
   // ─── Navigation ───────────────────────────────────────────────────────────
   const [currentView, setCurrentView] = useState<string>("dashboard");
 
+  // Redirect Fans / Admiradores to the fan view by default on login
+  React.useEffect(() => {
+    if (authUser && authUser.role === "Fans / Admiradores" && currentView === "dashboard") {
+      setCurrentView("fans");
+    }
+  }, [authUser]);
+
   // ─── Data via Supabase hooks (with fallback to mockData) ──────────────────
   const { clubs, setClubs, add: addClub, update: updateClub, remove: removeClub } = useClubs(initialClubs);
   const { players, setPlayers, add: addPlayer, update: updatePlayer, remove: removePlayer } = usePlayers(initialPlayers);

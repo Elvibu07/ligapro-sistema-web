@@ -113,7 +113,7 @@ export interface Stadium {
 
 export interface SystemUser {
   name: string;
-  role: "Administrador General" | "Registrador de Clubes" | "Auditor Disciplinario" | "Coordinador VAR" | "Comisión Arbitral";
+  role: "Administrador General" | "Registrador de Clubes" | "Auditor Disciplinario" | "Coordinador VAR" | "Comisión Arbitral" | "Fans / Admiradores";
   email: string;
   avatar: string;
 }

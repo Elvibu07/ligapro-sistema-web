@@ -55,14 +55,14 @@ const menuItems: MenuItem[] = [
     id: "posiciones",
     label: "Tabla de Posiciones",
     icon: Trophy,
-    rolesAllowed: ["Administrador General", "Registrador de Clubes", "Auditor Disciplinario", "Coordinador VAR", "Comisión Arbitral"],
+    rolesAllowed: ["Administrador General", "Registrador de Clubes", "Auditor Disciplinario", "Coordinador VAR", "Comisión Arbitral", "Fans / Admiradores"],
     category: "Campeonato"
   },
   {
     id: "fixture",
     label: "Fixture y Calendario",
     icon: CalendarDays,
-    rolesAllowed: ["Administrador General", "Registrador de Clubes", "Auditor Disciplinario", "Coordinador VAR", "Comisión Arbitral"],
+    rolesAllowed: ["Administrador General", "Registrador de Clubes", "Auditor Disciplinario", "Coordinador VAR", "Comisión Arbitral", "Fans / Admiradores"],
     category: "Campeonato"
   },
   {
@@ -139,7 +139,7 @@ const menuItems: MenuItem[] = [
     id: "security",
     label: "Acceso y Configuración",
     icon: LockKeyhole,
-    rolesAllowed: ["Administrador General", "Registrador de Clubes", "Auditor Disciplinario", "Coordinador VAR", "Comisión Arbitral"],
+    rolesAllowed: ["Administrador General", "Registrador de Clubes", "Auditor Disciplinario", "Coordinador VAR", "Comisión Arbitral", "Fans / Admiradores"],
     category: "Seguridad"
   }
 ];

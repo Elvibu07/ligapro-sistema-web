@@ -21,6 +21,7 @@ export default function LoginPage({ onLogin, onRegister, loading, error, onClear
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
 
+  const [selectedRole, setSelectedRole] = useState<AuthUser['role']>('Fans / Admiradores');
   const [inviteCode, setInviteCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showDemoDrawer, setShowDemoDrawer] = useState(false);
@@ -39,12 +40,14 @@ export default function LoginPage({ onLogin, onRegister, loading, error, onClear
     if (mode === 'login') {
       await onLogin(email, password);
     } else if (mode === 'register') {
-      const code = inviteCode.trim().toLowerCase();
-      if (code !== '0cbddd2f-4d0a-4218-ab41-e8779014e988' && code !== 'ligapro-2026') {
-        alert("Código de acceso inválido. El registro de cuentas públicas está cerrado. Por favor proporcione un código de invitación oficial provisto por la administración de la liga.");
-        return;
+      if (selectedRole !== 'Fans / Admiradores') {
+        const code = inviteCode.trim().toLowerCase();
+        if (code !== '0cbddd2f-4d0a-4218-ab41-e8779014e988' && code !== 'ligapro-2026') {
+          alert("Código de acceso inválido. El registro de cuentas públicas está cerrado. Por favor proporcione un código de invitación oficial provisto por la administración de la liga.");
+          return;
+        }
       }
-      await onRegister(email, password, name, DEFAULT_ROLE);
+      await onRegister(email, password, name, selectedRole);
     }
   };
 
@@ -246,26 +249,38 @@ export default function LoginPage({ onLogin, onRegister, loading, error, onClear
                     </div>
                   )}
 
-                  {/* Role info (register only) — role is pre-assigned, not selectable */}
+                  {/* Role info (register only) */}
                   {mode === 'register' && (
                     <div>
                       <label className="block text-[10px] font-mono text-slate-400 uppercase tracking-wider mb-1.5 font-bold">
                         Rol Oficial de Competición
                       </label>
                       <div className="relative">
-                        <Shield size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                        <div className="w-full bg-slate-950 border border-slate-800 text-slate-400 pl-9 pr-4 py-2.5 rounded-lg text-xs font-medium cursor-not-allowed select-none">
-                          {DEFAULT_ROLE}
-                        </div>
+                        <Shield size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#CCFF00]" />
+                        <select
+                          value={selectedRole}
+                          onChange={e => setSelectedRole(e.target.value as AuthUser['role'])}
+                          className="w-full bg-slate-950 border border-slate-800 text-slate-100 pl-9 pr-8 py-2.5 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#CCFF00]/50 transition cursor-pointer appearance-none"
+                        >
+                          <option value="Fans / Admiradores">Fans / Admiradores (Acceso Público Directo)</option>
+                          <option value="Administrador General">Administrador General (Restringido)</option>
+                          <option value="Registrador de Clubes">Registrador de Clubes (Restringido)</option>
+                          <option value="Auditor Disciplinario">Auditor Disciplinario (Restringido)</option>
+                          <option value="Coordinador VAR">Coordinador VAR (Restringido)</option>
+                          <option value="Comisión Arbitral">Comisión Arbitral (Restringido)</option>
+                        </select>
+                        <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
                       </div>
-                      <p className="text-[9.5px] text-slate-600 font-mono mt-1 leading-normal">
-                        * El rol es asignado por la administración de la liga. Contacte al Administrador General para cambios de rol.
+                      <p className="text-[9.5px] text-slate-500 font-mono mt-1 leading-normal">
+                        {selectedRole === "Fans / Admiradores" 
+                          ? "✓ Los aficionados tienen acceso libre a estadísticas, tablas y Zona Fan."
+                          : "* Requiere código oficial de invitación provisto por el directorio."}
                       </p>
                     </div>
                   )}
 
-                  {/* Invitation Code (register only) */}
-                  {mode === 'register' && (
+                  {/* Invitation Code (register only for administrative roles) */}
+                  {mode === 'register' && selectedRole !== 'Fans / Admiradores' && (
                     <div>
                       <label className="block text-[10px] font-mono text-amber-400 uppercase tracking-wider mb-1.5 font-bold">
                         Código de Invitación de Seguridad *
@@ -282,7 +297,7 @@ export default function LoginPage({ onLogin, onRegister, loading, error, onClear
                         />
                       </div>
                       <p className="text-[9.5px] text-slate-500 font-mono mt-1 leading-normal">
-                        * El registro público está deshabilitado. Use su llave de invitación oficial (<span className="text-[#CCFF00] font-bold">0cbddd2f-4d0a-4218-ab41-e8779014e988</span>) para registrarse.
+                        * Ingrese su llave de invitación oficial (<span className="text-[#CCFF00] font-bold">0cbddd2f-4d0a-4218-ab41-e8779014e988</span>) para registrarse con este rol.
                       </p>
                     </div>
                   )}
@@ -545,7 +560,8 @@ export default function LoginPage({ onLogin, onRegister, loading, error, onClear
                         { label: "Registrador de Clubes", email: "clubes@ligapro.ec", name: "Ing. María Flores" },
                         { label: "Auditor Disciplinario", email: "disciplina@ligapro.ec", name: "Dr. Roberto Ochoa" },
                         { label: "Coordinador VAR", email: "var@ligapro.ec", name: "Ing. Wilson Ávila" },
-                        { label: "Comisión Arbitral / Árbitros", email: "arbitros@ligapro.ec", name: "Ltc. Nestor Pitana" }
+                        { label: "Comisión Arbitral / Árbitros", email: "arbitros@ligapro.ec", name: "Ltc. Nestor Pitana" },
+                        { label: "Hincha / Admirador (Público)", email: "fan@ligapro.ec", name: "Hincha Admirador" }
                       ].map((cred) => (
                         <button
                           key={cred.email}
