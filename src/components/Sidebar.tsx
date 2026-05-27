@@ -219,21 +219,23 @@ export default function Sidebar({ currentView, onNavigate, userRole }: SidebarPr
       </div>
 
       {/* Zona Fan button */}
-      <div className="px-4 pb-4">
-        <button
-          id="sidemenu-fans"
-          onClick={() => onNavigate("fans")}
-          className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-black transition-all border ${
-            currentView === "fans"
-              ? "bg-[#CCFF00] text-slate-950 border-[#CCFF00]/50 shadow-lg shadow-[#CCFF00]/20"
-              : "bg-[#CCFF00]/10 text-[#CCFF00] border-[#CCFF00]/20 hover:bg-[#CCFF00]/20"
-          }`}
-        >
-          <Heart size={14} fill={currentView === "fans" ? "currentColor" : "none"} />
-          <span>Zona Fan</span>
-          <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded-full bg-rose-500/80 text-white font-black">FAN</span>
-        </button>
-      </div>
+      {userRole === "Fans / Admiradores" && (
+        <div className="px-4 pb-4">
+          <button
+            id="sidemenu-fans"
+            onClick={() => onNavigate("fans")}
+            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-black transition-all border ${
+              currentView === "fans"
+                ? "bg-[#CCFF00] text-slate-950 border-[#CCFF00]/50 shadow-lg shadow-[#CCFF00]/20"
+                : "bg-[#CCFF00]/10 text-[#CCFF00] border-[#CCFF00]/20 hover:bg-[#CCFF00]/20"
+            }`}
+          >
+            <Heart size={14} fill={currentView === "fans" ? "currentColor" : "none"} />
+            <span>Zona Fan</span>
+            <span className="ml-auto text-[9px] px-1.5 py-0.5 rounded-full bg-rose-500/80 text-white font-black">FAN</span>
+          </button>
+        </div>
+      )}
 
       {/* Footer Info of the Logged Access */}
       <div className="p-4 border-t border-slate-900 bg-slate-950/80">
