@@ -178,11 +178,90 @@ export default function PredictionGame({ matches, clubs, user }: PredictionGameP
               );
             })}
 
-            {upcomingMatches.length === 0 && (
+            {upcomingMatches.length === 0 && finishedMatches.filter(m => predictions[m.id]).length === 0 && (
               <div className="col-span-full text-center py-12 text-slate-500 font-mono text-sm border border-slate-800 rounded-2xl bg-slate-900/30">
                 No hay partidos programados actualmente para pronosticar.
               </div>
             )}
+
+            {finishedMatches.filter(m => predictions[m.id]).length > 0 && (
+              <div className="col-span-full mt-4 mb-1">
+                <h3 className="text-white font-bold flex items-center gap-2 text-sm uppercase tracking-wider">
+                  <CheckCircle2 className="text-[#CCFF00]" size={16}/> Historial de Pronósticos
+                </h3>
+              </div>
+            )}
+
+            {finishedMatches.filter(m => predictions[m.id]).map(match => {
+              const pred = predictions[match.id];
+              const home = getClub(match.homeTeamId);
+              const away = getClub(match.awayTeamId);
+              
+              const realHomeWin = match.homeScore! > match.awayScore!;
+              const realAwayWin = match.awayScore! > match.homeScore!;
+              const realTie = match.homeScore === match.awayScore;
+
+              const predHomeWin = pred.homeScore > pred.awayScore;
+              const predAwayWin = pred.awayScore > pred.homeScore;
+              const predTie = pred.homeScore === pred.awayScore;
+
+              let pointsEarned = 0;
+              if (pred.homeScore === match.homeScore && pred.awayScore === match.awayScore) {
+                pointsEarned = 3;
+              } else if ((realHomeWin && predHomeWin) || (realAwayWin && predAwayWin) || (realTie && predTie)) {
+                pointsEarned = 1;
+              }
+
+              return (
+                <div key={match.id} className="bg-slate-900/40 border border-slate-800 rounded-2xl p-5 opacity-90">
+                  <div className="flex justify-between items-center mb-4 border-b border-slate-800/50 pb-3">
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">
+                      FINALIZADO
+                    </span>
+                    {pointsEarned === 3 ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#CCFF00]/20 text-[#CCFF00] border border-[#CCFF00]/30 flex items-center gap-1">
+                        <Trophy size={10}/> EXACTO (+3)
+                      </span>
+                    ) : pointsEarned === 1 ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                        <CheckCircle2 size={10}/> GANADOR (+1)
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center gap-1">
+                        <AlertCircle size={10}/> FALLADO (0)
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex flex-col items-center flex-1">
+                      <div className="w-10 h-10 rounded-full bg-slate-800/50 flex items-center justify-center p-1.5 mb-1 opacity-70">
+                        {home?.logo}
+                      </div>
+                      <p className="text-slate-400 font-bold text-[10px] text-center leading-tight">{home?.shortName}</p>
+                    </div>
+
+                    <div className="flex flex-col items-center flex-1 min-w-[120px]">
+                      <div className="text-center bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 w-full mb-2">
+                        <p className="text-[9px] text-slate-500 font-mono mb-1">RESULTADO REAL</p>
+                        <p className="text-xl font-black text-white leading-none">{match.homeScore} - {match.awayScore}</p>
+                      </div>
+                      <div className="text-center bg-slate-900 border border-slate-800 rounded-lg px-3 py-1.5 w-full">
+                        <p className="text-[9px] text-slate-500 font-mono mb-0.5">TU PRONÓSTICO</p>
+                        <p className="text-sm font-bold text-slate-400 leading-none">{pred.homeScore} - {pred.awayScore}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-center flex-1">
+                      <div className="w-10 h-10 rounded-full bg-slate-800/50 flex items-center justify-center p-1.5 mb-1 opacity-70">
+                        {away?.logo}
+                      </div>
+                      <p className="text-slate-400 font-bold text-[10px] text-center leading-tight">{away?.shortName}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
