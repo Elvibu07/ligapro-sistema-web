@@ -14,7 +14,8 @@ import {
   AlertCircle, 
   CheckCircle2, 
   Navigation,
-  Globe
+  Globe,
+  Trophy
 } from "lucide-react";
 import { Match, Club, Stadium } from "../types";
 
