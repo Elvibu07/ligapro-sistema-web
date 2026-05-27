@@ -30,6 +30,7 @@ interface MatchesViewProps {
 export default function MatchesView({ matches, clubs, stadiums, onMatchesChange, onAddMatch, onUpdateMatch }: MatchesViewProps) {
   const [showAddMatchForm, setShowAddMatchForm] = useState(false);
   const [activeTab, setActiveTab] = useState<"lista" | "mapa">("lista");
+  const [editingMatchResult, setEditingMatchResult] = useState<Match | null>(null);
 
   // Form State
   const [newHome, setNewHome] = useState("barcelona-sc");
@@ -160,11 +161,24 @@ export default function MatchesView({ matches, clubs, stadiums, onMatchesChange,
                         </span>
                         <span className="text-slate-500 font-mono text-[10px]">{m.date} a las {m.time}</span>
                       </div>
-                      <p className="text-sm font-black text-slate-100">
-                        {getClubShortName(m.homeTeamId)} <span className="text-slate-550 font-normal">vs</span> {getClubShortName(m.awayTeamId)}
+                      <p className="text-sm font-black text-slate-100 flex items-center gap-2">
+                        {getClubShortName(m.homeTeamId)} 
+                        {m.status === "Finalizado" ? (
+                          <span className="text-[#CCFF00] px-2">{m.homeScore} - {m.awayScore}</span>
+                        ) : (
+                          <span className="text-slate-550 font-normal">vs</span>
+                        )}
+                        {getClubShortName(m.awayTeamId)}
                       </p>
                       <p className="text-[10px] font-mono text-slate-500 flex items-center gap-1 truncate uppercase">
                         <MapPin size={10} className="text-[#CCFF00]" /> {getStadiumName(m.stadiumId)}
+                        <span className={`ml-2 px-1.5 py-0.5 rounded text-[8px] font-bold ${
+                          m.status === "Finalizado" ? "bg-slate-700 text-slate-300" :
+                          m.status === "Programado" ? "bg-blue-500/20 text-blue-400" :
+                          "bg-emerald-500/20 text-emerald-400"
+                        }`}>
+                          {m.status}
+                        </span>
                       </p>
                     </div>
 
@@ -230,6 +244,13 @@ export default function MatchesView({ matches, clubs, stadiums, onMatchesChange,
                            LOGÍSTICA PENDIENTE
                         </span>
                       )}
+                      
+                      <button 
+                        onClick={() => setEditingMatchResult(m)}
+                        className="mt-1 text-[10px] font-bold px-3 py-1.5 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 border border-blue-500/30 rounded transition-colors w-full"
+                      >
+                        {m.status === 'Finalizado' ? 'Editar Resultado' : 'Registrar Resultado'}
+                      </button>
                     </div>
 
                   </div>
@@ -404,6 +425,116 @@ export default function MatchesView({ matches, clubs, stadiums, onMatchesChange,
         </div>
       )}
 
+      {/* Match Result Modal */}
+      {editingMatchResult && (
+        <MatchResultModal 
+          match={editingMatchResult}
+          homeName={getClubShortName(editingMatchResult.homeTeamId)}
+          awayName={getClubShortName(editingMatchResult.awayTeamId)}
+          onClose={() => setEditingMatchResult(null)}
+          onSave={async (status, homeScore, awayScore) => {
+            if (onUpdateMatch) {
+              await onUpdateMatch(editingMatchResult.id, { status, homeScore, awayScore });
+            } else {
+              const updated = matches.map(m => m.id === editingMatchResult.id ? { ...m, status, homeScore, awayScore } : m);
+              onMatchesChange(updated);
+            }
+            setEditingMatchResult(null);
+          }}
+        />
+      )}
+
+    </div>
+  );
+}
+
+// Sub-component for Match Result editing
+function MatchResultModal({ 
+  match, 
+  homeName, 
+  awayName, 
+  onClose, 
+  onSave 
+}: { 
+  match: Match, 
+  homeName: string, 
+  awayName: string, 
+  onClose: () => void, 
+  onSave: (status: Match['status'], homeScore?: number, awayScore?: number) => void 
+}) {
+  const [status, setStatus] = useState<Match['status']>(match.status);
+  const [hScore, setHScore] = useState<string>(match.homeScore?.toString() ?? '');
+  const [aScore, setAScore] = useState<string>(match.awayScore?.toString() ?? '');
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    const hs = hScore !== '' ? parseInt(hScore) : undefined;
+    const as = aScore !== '' ? parseInt(aScore) : undefined;
+    onSave(status, hs, as);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <form onSubmit={handleSave} className="bg-slate-950 border border-slate-800 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl text-left">
+        <div className="bg-slate-900 px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+          <h3 className="text-sm font-black text-slate-100 flex items-center gap-1.5 font-sans">
+            <Trophy size={16} className="text-[#CCFF00]" /> RESULTADO DEL PARTIDO
+          </h3>
+          <button type="button" onClick={onClose} className="p-1.5 rounded-lg text-slate-400 hover:text-white transition">
+            <X size={15} />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-5">
+          <div>
+            <label className="block text-slate-400 text-xs font-bold mb-2">Estado del Partido</label>
+            <select 
+              value={status} 
+              onChange={(e) => setStatus(e.target.value as Match['status'])}
+              className="w-full bg-slate-900 border border-slate-850 p-2 text-white rounded text-sm focus:outline-none"
+            >
+              <option value="Programado">Programado</option>
+              <option value="En Juego">En Juego</option>
+              <option value="Finalizado">Finalizado</option>
+              <option value="Postergado">Postergado</option>
+            </select>
+          </div>
+
+          {(status === 'En Juego' || status === 'Finalizado') && (
+            <div>
+              <label className="block text-slate-400 text-xs font-bold mb-3">Marcador Oficial</label>
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex flex-col items-center flex-1">
+                  <p className="text-white font-bold text-xs text-center mb-2 truncate w-full">{homeName}</p>
+                  <input 
+                    type="number" min="0" required
+                    value={hScore} onChange={(e) => setHScore(e.target.value)}
+                    className="w-16 h-16 bg-slate-900 border border-slate-800 rounded-xl text-center text-2xl font-black text-white focus:border-[#CCFF00] focus:outline-none"
+                  />
+                </div>
+                <div className="text-slate-500 font-black text-xl pt-6">VS</div>
+                <div className="flex flex-col items-center flex-1">
+                  <p className="text-white font-bold text-xs text-center mb-2 truncate w-full">{awayName}</p>
+                  <input 
+                    type="number" min="0" required
+                    value={aScore} onChange={(e) => setAScore(e.target.value)}
+                    className="w-16 h-16 bg-slate-900 border border-slate-800 rounded-xl text-center text-2xl font-black text-white focus:border-[#CCFF00] focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="bg-slate-900 px-5 py-3 border-t border-slate-800 flex justify-end space-x-2">
+          <button type="button" onClick={onClose} className="px-4 py-1.5 bg-slate-950 text-slate-400 rounded text-xs hover:bg-slate-800 transition">
+            Cancelar
+          </button>
+          <button type="submit" className="px-4 py-1.5 bg-[#CCFF00] text-slate-950 font-extrabold rounded text-xs hover:bg-[#b0dc00] transition">
+            Guardar Resultado
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
