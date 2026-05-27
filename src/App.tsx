@@ -59,7 +59,7 @@ function LoadingSkeleton() {
 
 export default function App() {
   // ─── Auth ──────────────────────────────────────────────────────────────────
-  const { user: authUser, loading: authLoading, error: authError, login, register, update: updateProfile, logout, setError: setAuthError } = useAuth();
+  const { user: authUser, loading: authLoading, error: authError, login, register, update: updateProfile, logout, loginWithOAuth, setError: setAuthError } = useAuth();
 
   // ─── Navigation ───────────────────────────────────────────────────────────
   const [currentView, setCurrentView] = useState<string>("dashboard");
