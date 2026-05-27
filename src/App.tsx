@@ -67,10 +67,14 @@ export default function App() {
   const [currentView, setCurrentView] = useState<string>("dashboard");
   const [loginView, setLoginView] = useState<'portal' | 'fan' | 'admin'>('portal');
 
-  // Redirect Fans / Admiradores to the fan view by default on login
+  // Redirect appropriately when a user logs in
   React.useEffect(() => {
-    if (authUser && authUser.role === "Fans / Admiradores" && currentView === "dashboard") {
-      setCurrentView("fans");
+    if (authUser) {
+      if (authUser.role === "Fans / Admiradores") {
+        setCurrentView("fans");
+      } else {
+        setCurrentView("dashboard");
+      }
     }
   }, [authUser]);
 

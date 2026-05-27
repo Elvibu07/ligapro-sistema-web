@@ -115,9 +115,13 @@ export default function SquadView({ clubs, players, onPlayersChange, onAddPlayer
       const nextDocs = { ...player.documentStatus, [key]: !player.documentStatus[key] };
       let nextStatus = player.status;
       const allOk = nextDocs.photoId && nextDocs.contractSigned && nextDocs.medicalCertificate;
-      if (!allOk) {
+      const isSuspended = player.redCards > 0 || player.yellowCards >= 5;
+      
+      if (isSuspended) {
+        nextStatus = "Suspendido";
+      } else if (!allOk) {
         nextStatus = "Por Habilitar";
-      } else if (player.status === "Por Habilitar") {
+      } else {
         nextStatus = "Habilitado";
       }
 
@@ -136,9 +140,13 @@ export default function SquadView({ clubs, players, onPlayersChange, onAddPlayer
           // Reevaluate habilitated label
           let nextStatus = p.status;
           const allOk = nextDocs.photoId && nextDocs.contractSigned && nextDocs.medicalCertificate;
-          if (!allOk) {
+          const isSuspended = p.redCards > 0 || p.yellowCards >= 5;
+          
+          if (isSuspended) {
+            nextStatus = "Suspendido";
+          } else if (!allOk) {
             nextStatus = "Por Habilitar";
-          } else if (p.status === "Por Habilitar") {
+          } else {
             nextStatus = "Habilitado";
           }
 
@@ -169,7 +177,24 @@ export default function SquadView({ clubs, players, onPlayersChange, onAddPlayer
     }
   };
 
-  const currentClubPlayers = players.filter(p => p.clubId === selectedClubId);
+  // Apply automated bans and document checks dynamically
+  const processedPlayers = players.map(p => {
+    const isSuspended = p.redCards > 0 || p.yellowCards >= 5;
+    const allOk = p.documentStatus.photoId && p.documentStatus.contractSigned && p.documentStatus.medicalCertificate;
+    
+    let effectiveStatus = p.status;
+    if (isSuspended) {
+      effectiveStatus = "Suspendido";
+    } else if (!allOk) {
+      effectiveStatus = "Por Habilitar";
+    } else {
+      effectiveStatus = "Habilitado";
+    }
+
+    return { ...p, status: effectiveStatus as any };
+  });
+
+  const currentClubPlayers = processedPlayers.filter(p => p.clubId === selectedClubId);
 
   const filteredPlayers = currentClubPlayers.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -200,8 +225,8 @@ export default function SquadView({ clubs, players, onPlayersChange, onAddPlayer
           </h3>
           <div className="space-y-1">
             {clubs.map((c) => {
-              const activeCount = players.filter(p => p.clubId === c.id && p.status === "Habilitado").length;
-              const totalCount = players.filter(p => p.clubId === c.id).length;
+              const activeCount = processedPlayers.filter(p => p.clubId === c.id && p.status === "Habilitado").length;
+              const totalCount = processedPlayers.filter(p => p.clubId === c.id).length;
               const isSelected = selectedClubId === c.id;
 
               return (
@@ -314,7 +339,7 @@ export default function SquadView({ clubs, players, onPlayersChange, onAddPlayer
                     </div>
 
                     {/* Status badge */}
-                    <span className={`absolute top-4 right-4 rounded-full h-2 w-2 ${
+                    <span className={`absolute top-4 right-4 rounded-full h-3 w-3 border border-slate-900 shadow-sm ${
                       player.status === "Habilitado" 
                         ? "bg-emerald-500" 
                         : player.status === "Suspendido"

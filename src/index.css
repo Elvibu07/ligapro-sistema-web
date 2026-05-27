@@ -239,3 +239,42 @@
 .light ::-webkit-scrollbar-thumb:hover {
   background: #1d4ed8 !important;
 }
+
+/* ── Print Media Query for PDF Export ── */
+@media print {
+  /* Hide sidebar, header, and all non-modal content */
+  header, aside, .absolute.bottom-3, button {
+    display: none !important;
+  }
+  
+  /* Reset background to white for printing */
+  body, main {
+    background-color: white !important;
+    color: black !important;
+  }
+  
+  /* Make the modal take up the full page */
+  .fixed.inset-0 {
+    position: absolute !important;
+    background: transparent !important;
+  }
+  
+  /* Clean up borders and shadows for the print */
+  .border, .border-b, .border-t {
+    border-color: #e2e8f0 !important;
+  }
+  
+  .bg-slate-950, .bg-slate-900, .bg-slate-800 {
+    background-color: transparent !important;
+    color: black !important;
+    box-shadow: none !important;
+  }
+  
+  .text-slate-100, .text-slate-200, .text-slate-300, .text-white {
+    color: black !important;
+  }
+  
+  .text-slate-400, .text-slate-500 {
+    color: #475569 !important;
+  }
+}

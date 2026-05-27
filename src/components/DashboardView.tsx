@@ -597,8 +597,11 @@ export default function DashboardView({ clubs, players, matches, stadiums, onNav
             <div className="bg-slate-900 px-5 py-3 border-t border-slate-800 flex items-center justify-between">
               <span className="text-[9.5px] font-mono text-slate-500">ID Ficha: {shownPlanilla.id}</span>
               <div className="flex space-x-2">
-                <button className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-950 text-slate-300 hover:text-white rounded text-xs transition border border-slate-800">
-                  <Download size={12} /> PDF
+                <button 
+                  onClick={() => window.print()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-950 text-slate-300 hover:text-white rounded text-xs transition border border-slate-800"
+                >
+                  <Download size={12} /> Imprimir PDF Oficial
                 </button>
                 <button className="flex items-center gap-1.5 px-3 py-1.5 bg-[#CCFF00] text-slate-950 font-bold rounded text-xs transition hover:bg-[#b0dc00]">
                   <Share2 size={12} /> Sincronizar
