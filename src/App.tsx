@@ -274,6 +274,7 @@ export default function App() {
             players={players}
             matches={matches}
             stadiums={stadiums}
+            user={authUser}
           />
         );
       default:

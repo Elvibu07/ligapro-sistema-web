@@ -16,16 +16,21 @@ import {
   Zap,
   Award,
   Target,
+  Target,
   Activity,
   X,
+  Gamepad2
 } from "lucide-react";
 import type { Club, Player, Match, Stadium } from "../types";
+import type { AuthUser } from "../lib/services/auth";
+import PredictionGame from "./PredictionGame";
 
 interface FanViewProps {
   clubs: Club[];
   players: Player[];
   matches: Match[];
   stadiums: Stadium[];
+  user: AuthUser | null;
 }
 
 // Club colors map for visual identity
@@ -175,8 +180,8 @@ function PlayerModal({ player, club, onClose }: { player: Player; club: Club | u
 }
 
 // ── Main FanView ──────────────────────────────────────────────────────────────
-export default function FanView({ clubs, players, matches, stadiums }: FanViewProps) {
-  const [activeTab, setActiveTab] = useState<"inicio" | "posiciones" | "fixture" | "jugadores">("inicio");
+export default function FanView({ clubs, players, matches, stadiums, user }: FanViewProps) {
+  const [activeTab, setActiveTab] = useState<"inicio" | "posiciones" | "fixture" | "jugadores" | "predicciones">("inicio");
   const [selectedClubId, setSelectedClubId] = useState<string | null>(null);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
   const [favoriteClub, setFavoriteClub] = useState<string | null>(null);
@@ -199,6 +204,7 @@ export default function FanView({ clubs, players, matches, stadiums }: FanViewPr
     { id: "posiciones", label: "Tabla", icon: Trophy },
     { id: "fixture", label: "Partidos", icon: CalendarDays },
     { id: "jugadores", label: "Jugadores", icon: Users },
+    { id: "predicciones", label: "Polla LigaPro", icon: Gamepad2 },
   ] as const;
 
   return (
@@ -665,6 +671,11 @@ export default function FanView({ clubs, players, matches, stadiums }: FanViewPr
             </div>
           )}
         </div>
+      )}
+
+      {/* ═══════════════════════ PREDICCIONES ════════════════════════ */}
+      {activeTab === "predicciones" && (
+        <PredictionGame matches={matches} clubs={clubs} user={user} />
       )}
 
       {/* ── Player Modal ─────────────────────────────────────────── */}
