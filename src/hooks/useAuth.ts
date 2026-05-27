@@ -10,7 +10,16 @@ export function useAuth() {
   useEffect(() => {
     // Get initial session
     getSession().then((sessionUser) => {
-      setUser(sessionUser);
+      if (sessionUser) {
+        setUser(sessionUser);
+      } else {
+        const mockSession = localStorage.getItem('ligapro_mock_session');
+        if (mockSession) {
+          try {
+            setUser(JSON.parse(mockSession));
+          } catch (e) {}
+        }
+      }
       setLoading(false);
     });
 
@@ -27,12 +36,19 @@ export function useAuth() {
         });
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
+        localStorage.removeItem('ligapro_mock_session');
       }
-      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  // Sync user state to localStorage for mock persistence
+  useEffect(() => {
+    if (user) {
+      localStorage.setItem('ligapro_mock_session', JSON.stringify(user));
+    }
+  }, [user]);
 
   const login = useCallback(async (email: string, password: string) => {
     setLoading(true);
@@ -113,6 +129,7 @@ export function useAuth() {
 
   const logout = useCallback(async () => {
     await signOut();
+    localStorage.removeItem('ligapro_mock_session');
     setUser(null);
   }, []);
 
