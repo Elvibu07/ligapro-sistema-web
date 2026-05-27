@@ -140,7 +140,7 @@ export const initialPlayers: Player[] = [
     redCards: 0,
     goals: 0,
     contractUntil: "2026-12",
-    image: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200",
+    image: "https://a.espncdn.com/combiner/i?img=/i/headshots/soccer/players/full/176161.png&w=350&h=254",
     height: "1.88 m",
     weight: "83 kg",
     documentStatus: {
@@ -165,7 +165,7 @@ export const initialPlayers: Player[] = [
     redCards: 0,
     goals: 1,
     contractUntil: "2026-12",
-    image: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&q=80&w=200",
+    image: "https://a.espncdn.com/combiner/i?img=/i/headshots/soccer/players/full/209930.png&w=350&h=254",
     height: "1.89 m",
     weight: "81 kg",
     documentStatus: {
@@ -190,7 +190,7 @@ export const initialPlayers: Player[] = [
     redCards: 0,
     goals: 0,
     contractUntil: "2025-12",
-    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200",
+    image: "https://a.espncdn.com/combiner/i?img=/i/headshots/soccer/players/full/312153.png&w=350&h=254",
     height: "1.74 m",
     weight: "72 kg",
     documentStatus: {
@@ -215,7 +215,7 @@ export const initialPlayers: Player[] = [
     redCards: 0,
     goals: 0,
     contractUntil: "2025-12",
-    image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=200",
+    image: "https://a.espncdn.com/combiner/i?img=/i/headshots/soccer/players/full/181977.png&w=350&h=254",
     height: "1.78 m",
     weight: "74 kg",
     documentStatus: {
@@ -240,7 +240,7 @@ export const initialPlayers: Player[] = [
     redCards: 0,
     goals: 3,
     contractUntil: "2025-06",
-    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200", // Representative asset
+    image: "https://a.espncdn.com/combiner/i?img=/i/headshots/soccer/players/full/110825.png&w=350&h=254",
     height: "1.73 m",
     weight: "70 kg",
     documentStatus: {
@@ -265,7 +265,7 @@ export const initialPlayers: Player[] = [
     redCards: 1,
     goals: 2,
     contractUntil: "2026-12",
-    image: "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=200",
+    image: "https://a.espncdn.com/combiner/i?img=/i/headshots/soccer/players/full/297745.png&w=350&h=254",
     height: "1.78 m",
     weight: "73 kg",
     documentStatus: {
@@ -290,7 +290,7 @@ export const initialPlayers: Player[] = [
     redCards: 0,
     goals: 4,
     contractUntil: "2026-12",
-    image: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=200",
+    image: "https://a.espncdn.com/combiner/i?img=/i/headshots/soccer/players/full/219760.png&w=350&h=254",
     height: "1.75 m",
     weight: "69 kg",
     documentStatus: {
@@ -317,7 +317,7 @@ export const initialPlayers: Player[] = [
     redCards: 0,
     goals: 0,
     contractUntil: "2026-12",
-    image: "https://images.unsplash.com/photo-1500048993953-d23a436266cf?auto=format&fit=crop&q=80&w=200",
+    image: "https://a.espncdn.com/combiner/i?img=/i/headshots/soccer/players/full/104597.png&w=350&h=254",
     height: "1.96 m",
     weight: "90 kg",
     documentStatus: {
@@ -342,7 +342,7 @@ export const initialPlayers: Player[] = [
     redCards: 0,
     goals: 0,
     contractUntil: "2026-12",
-    image: "https://images.unsplash.com/photo-1513956589380-bad6acb9b9d4?auto=format&fit=crop&q=80&w=200",
+    image: "https://a.espncdn.com/combiner/i?img=/i/headshots/soccer/players/full/265819.png&w=350&h=254",
     height: "1.90 m",
     weight: "85 kg",
     documentStatus: {
@@ -367,7 +367,7 @@ export const initialPlayers: Player[] = [
     redCards: 0,
     goals: 1,
     contractUntil: "2026-12",
-    image: "https://images.unsplash.com/photo-1519345182560-3f2917c472ef?auto=format&fit=crop&q=80&w=200",
+    image: "https://a.espncdn.com/combiner/i?img=/i/headshots/soccer/players/full/201211.png&w=350&h=254",
     height: "1.79 m",
     weight: "74 kg",
     documentStatus: {
@@ -392,7 +392,7 @@ export const initialPlayers: Player[] = [
     redCards: 0,
     goals: 12,
     contractUntil: "2027-12",
-    image: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200",
+    image: "https://a.espncdn.com/combiner/i?img=/i/headshots/soccer/players/full/275525.png&w=350&h=254",
     height: "1.87 m",
     weight: "82 kg",
     documentStatus: {
@@ -417,7 +417,7 @@ export const initialPlayers: Player[] = [
     redCards: 0,
     goals: 2,
     contractUntil: "2025-12",
-    image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=200",
+    image: "https://a.espncdn.com/combiner/i?img=/i/headshots/soccer/players/full/236511.png&w=350&h=254",
     height: "1.72 m",
     weight: "68 kg",
     documentStatus: {
@@ -444,7 +444,7 @@ export const initialPlayers: Player[] = [
     redCards: 1,
     goals: 0,
     contractUntil: "2026-12",
-    image: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&q=80&w=200",
+    image: "https://a.espncdn.com/combiner/i?img=/i/headshots/soccer/players/full/268688.png&w=350&h=254",
     height: "1.86 m",
     weight: "82 kg",
     documentStatus: {
@@ -469,7 +469,7 @@ export const initialPlayers: Player[] = [
     redCards: 0,
     goals: 4,
     contractUntil: "2025-06", // Then Chelsea FC
-    image: "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?auto=format&fit=crop&q=80&w=200",
+    image: "https://a.espncdn.com/combiner/i?img=/i/headshots/soccer/players/full/350517.png&w=350&h=254",
     height: "1.77 m",
     weight: "71 kg",
     documentStatus: {
