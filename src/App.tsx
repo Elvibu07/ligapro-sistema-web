@@ -81,6 +81,22 @@ export default function App() {
   // ─── Data via Supabase hooks (with fallback to mockData) ──────────────────
   const { clubs, setClubs, add: addClub, update: updateClub, remove: removeClub } = useClubs(initialClubs);
   const { players, setPlayers, add: addPlayer, update: updatePlayer, remove: removePlayer } = usePlayers(initialPlayers);
+
+  // Auto-migrate player images from mockData to bypass stale localStorage
+  React.useEffect(() => {
+    setPlayers(prev => {
+      let changed = false;
+      const updated = prev.map(p => {
+        const initial = initialPlayers.find(i => i.id === p.id);
+        if (initial && initial.image !== p.image) {
+          changed = true;
+          return { ...p, image: initial.image };
+        }
+        return p;
+      });
+      return changed ? updated : prev;
+    });
+  }, [setPlayers]);
   const { matches, setMatches, add: addMatch, update: updateMatch } = useMatches(initialMatches);
   const { sanctions, setSanctions, add: addSanction, update: updateSanction } = useSanctions(initialSanctions);
   const { stadiums, setStadiums, update: updateStadium } = useStadiums(initialStadiums);
