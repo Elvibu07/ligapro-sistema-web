@@ -241,6 +241,15 @@ function PredictionInput({
   const [aScore, setAScore] = useState<string>(existingPrediction?.awayScore.toString() ?? '');
   const [saved, setSaved] = useState(!!existingPrediction);
 
+  // Sync state when predictions are loaded asynchronously from localStorage
+  useEffect(() => {
+    if (existingPrediction) {
+      setHScore(existingPrediction.homeScore.toString());
+      setAScore(existingPrediction.awayScore.toString());
+      setSaved(true);
+    }
+  }, [existingPrediction]);
+
   const handleSave = () => {
     if (hScore === '' || aScore === '') return;
     onSave(matchId, parseInt(hScore), parseInt(aScore));
