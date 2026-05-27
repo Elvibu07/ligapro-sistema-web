@@ -4,25 +4,25 @@ import type { AuthUser } from '../../lib/services/auth';
 import logoImg from '../../ligapro-logo.png';
 import { supabase } from '../../lib/supabase';
 
-interface LoginPageProps {
+interface AdminLoginPageProps {
   onLogin: (email: string, password: string) => Promise<boolean>;
   onRegister: (email: string, password: string, name: string, role: AuthUser['role']) => Promise<boolean>;
-  onOAuthLogin: (provider: 'google' | 'facebook') => Promise<boolean>;
   loading: boolean;
   error: string | null;
   onClearError: () => void;
+  onBack: () => void;
 }
 
 // Role is assigned by admin — not selectable by the user
 const DEFAULT_ROLE: AuthUser['role'] = 'Administrador General';
 
-export default function LoginPage({ onLogin, onRegister, onOAuthLogin, loading, error, onClearError }: LoginPageProps) {
+export default function AdminLoginPage({ onLogin, onRegister, loading, error, onClearError, onBack }: AdminLoginPageProps) {
   const [mode, setMode] = useState<'login' | 'register' | 'forgot' | 'verify'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
 
-  const [selectedRole, setSelectedRole] = useState<AuthUser['role']>('Fans / Admiradores');
+  const [selectedRole, setSelectedRole] = useState<AuthUser['role']>('Administrador General');
   const [inviteCode, setInviteCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showDemoDrawer, setShowDemoDrawer] = useState(false);
@@ -41,12 +41,10 @@ export default function LoginPage({ onLogin, onRegister, onOAuthLogin, loading, 
     if (mode === 'login') {
       await onLogin(email, password);
     } else if (mode === 'register') {
-      if (selectedRole !== 'Fans / Admiradores') {
-        const code = inviteCode.trim().toLowerCase();
-        if (code !== '0cbddd2f-4d0a-4218-ab41-e8779014e988' && code !== 'ligapro-2026') {
-          alert("Código de acceso inválido. El registro de cuentas públicas está cerrado. Por favor proporcione un código de invitación oficial provisto por la administración de la liga.");
-          return;
-        }
+      const code = inviteCode.trim().toLowerCase();
+      if (code !== '0cbddd2f-4d0a-4218-ab41-e8779014e988' && code !== 'ligapro-2026') {
+        alert("Código de acceso inválido. Por favor proporcione un código de invitación oficial provisto por la administración de la liga.");
+        return;
       }
       await onRegister(email, password, name, selectedRole);
     }
@@ -150,6 +148,14 @@ export default function LoginPage({ onLogin, onRegister, onOAuthLogin, loading, 
       <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
 
       <div className="w-full max-w-md relative z-10">
+
+        {/* Back Button */}
+        <button 
+          onClick={onBack}
+          className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-6 text-sm font-medium"
+        >
+          <ArrowLeft size={16} /> Volver al portal
+        </button>
 
         {/* Logo Header */}
         <div className="text-center mb-6">
@@ -263,25 +269,22 @@ export default function LoginPage({ onLogin, onRegister, onOAuthLogin, loading, 
                           onChange={e => setSelectedRole(e.target.value as AuthUser['role'])}
                           className="w-full bg-slate-950 border border-slate-800 text-slate-100 pl-9 pr-8 py-2.5 rounded-lg text-xs font-semibold focus:outline-none focus:border-[#CCFF00]/50 transition cursor-pointer appearance-none"
                         >
-                          <option value="Fans / Admiradores">Fans / Admiradores (Acceso Público Directo)</option>
-                          <option value="Administrador General">Administrador General (Restringido)</option>
-                          <option value="Registrador de Clubes">Registrador de Clubes (Restringido)</option>
-                          <option value="Auditor Disciplinario">Auditor Disciplinario (Restringido)</option>
-                          <option value="Coordinador VAR">Coordinador VAR (Restringido)</option>
-                          <option value="Comisión Arbitral">Comisión Arbitral (Restringido)</option>
+                          <option value="Administrador General">Administrador General</option>
+                          <option value="Registrador de Clubes">Registrador de Clubes</option>
+                          <option value="Auditor Disciplinario">Auditor Disciplinario</option>
+                          <option value="Coordinador VAR">Coordinador VAR</option>
+                          <option value="Comisión Arbitral">Comisión Arbitral</option>
                         </select>
                         <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
                       </div>
                       <p className="text-[9.5px] text-slate-500 font-mono mt-1 leading-normal">
-                        {selectedRole === "Fans / Admiradores" 
-                          ? "✓ Los aficionados tienen acceso libre a estadísticas, tablas y Zona Fan."
-                          : "* Requiere código oficial de invitación provisto por el directorio."}
+                        * Requiere código oficial de invitación provisto por el directorio.
                       </p>
                     </div>
                   )}
 
                   {/* Invitation Code (register only for administrative roles) */}
-                  {mode === 'register' && selectedRole !== 'Fans / Admiradores' && (
+                  {mode === 'register' && (
                     <div>
                       <label className="block text-[10px] font-mono text-amber-400 uppercase tracking-wider mb-1.5 font-bold">
                         Código de Invitación de Seguridad *
@@ -390,41 +393,7 @@ export default function LoginPage({ onLogin, onRegister, onOAuthLogin, loading, 
                     )}
                   </button>
 
-                  {/* Or divider */}
-                  <div className="flex items-center my-4">
-                    <div className="flex-1 border-t border-slate-800" />
-                    <span className="px-3 text-[10px] font-mono text-slate-500 uppercase tracking-widest">O ingresa con</span>
-                    <div className="flex-1 border-t border-slate-800" />
-                  </div>
 
-                  {/* OAuth Social Buttons */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      disabled={loading}
-                      onClick={() => onOAuthLogin('google')}
-                      className="flex items-center justify-center gap-2 bg-slate-950 border border-slate-850 hover:bg-slate-900 hover:text-white text-slate-200 py-2.5 rounded-xl text-xs font-bold transition active:scale-[0.98] disabled:opacity-60"
-                    >
-                      <svg className="w-4 h-4" viewBox="0 0 24 24">
-                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-                      </svg>
-                      Google
-                    </button>
-                    <button
-                      type="button"
-                      disabled={loading}
-                      onClick={() => onOAuthLogin('facebook')}
-                      className="flex items-center justify-center gap-2 bg-slate-950 border border-slate-850 hover:bg-slate-900 hover:text-white text-slate-200 py-2.5 rounded-xl text-xs font-bold transition active:scale-[0.98] disabled:opacity-60"
-                    >
-                      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="#1877F2">
-                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-                      </svg>
-                      Facebook
-                    </button>
-                  </div>
 
                 </form>
               )}
@@ -597,8 +566,7 @@ export default function LoginPage({ onLogin, onRegister, onOAuthLogin, loading, 
                         { label: "Registrador de Clubes", email: "clubes@ligapro.ec", name: "Ing. María Flores" },
                         { label: "Auditor Disciplinario", email: "disciplina@ligapro.ec", name: "Dr. Roberto Ochoa" },
                         { label: "Coordinador VAR", email: "var@ligapro.ec", name: "Ing. Wilson Ávila" },
-                        { label: "Comisión Arbitral / Árbitros", email: "arbitros@ligapro.ec", name: "Ltc. Nestor Pitana" },
-                        { label: "Hincha / Admirador (Público)", email: "fan@ligapro.ec", name: "Hincha Admirador" }
+                        { label: "Comisión Arbitral / Árbitros", email: "arbitros@ligapro.ec", name: "Ltc. Nestor Pitana" }
                       ].map((cred) => (
                         <button
                           key={cred.email}

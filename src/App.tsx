@@ -14,7 +14,9 @@ import { useAuth } from "./hooks/useAuth";
 import { useClubs, usePlayers, useMatches, useSanctions, useStadiums, usePostponements } from "./hooks/useData";
 
 // Auth
-import LoginPage from "./components/auth/LoginPage";
+import AuthPortal from "./components/auth/AuthPortal";
+import FanLoginPage from "./components/auth/FanLoginPage";
+import AdminLoginPage from "./components/auth/AdminLoginPage";
 
 // Import modules
 import Header from "./components/Header";
@@ -63,6 +65,7 @@ export default function App() {
 
   // ─── Navigation ───────────────────────────────────────────────────────────
   const [currentView, setCurrentView] = useState<string>("dashboard");
+  const [loginView, setLoginView] = useState<'portal' | 'fan' | 'admin'>('portal');
 
   // Redirect Fans / Admiradores to the fan view by default on login
   React.useEffect(() => {
@@ -115,16 +118,34 @@ export default function App() {
 
   // ─── Show login page if not authenticated ────────────────────────────────
   if (!authUser) {
-    return (
-      <LoginPage
-        onLogin={login}
-        onRegister={register}
-        onOAuthLogin={loginWithOAuth}
-        loading={authLoading}
-        error={authError}
-        onClearError={() => setAuthError(null)}
-      />
-    );
+    if (loginView === 'portal') {
+      return <AuthPortal onSelectPortal={setLoginView} />;
+    }
+    if (loginView === 'fan') {
+      return (
+        <FanLoginPage
+          onLogin={login}
+          onRegister={register}
+          onOAuthLogin={loginWithOAuth}
+          loading={authLoading}
+          error={authError}
+          onClearError={() => setAuthError(null)}
+          onBack={() => setLoginView('portal')}
+        />
+      );
+    }
+    if (loginView === 'admin') {
+      return (
+        <AdminLoginPage
+          onLogin={login}
+          onRegister={register}
+          loading={authLoading}
+          error={authError}
+          onClearError={() => setAuthError(null)}
+          onBack={() => setLoginView('portal')}
+        />
+      );
+    }
   }
 
   const renderActiveView = () => {
