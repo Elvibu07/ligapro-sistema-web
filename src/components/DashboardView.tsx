@@ -34,6 +34,7 @@ export default function DashboardView({ clubs, players, matches, stadiums, onNav
   // Dynamic action state
   const [postponementStatus, setPostponementStatus] = useState<"pending" | "approved" | "rejected">("pending");
   const [disputeStatus, setDisputeStatus] = useState<"pending" | "resolved">("pending");
+  const [showFullHistory, setShowFullHistory] = useState(false);
   
   // Game simulation state
   const [isSimulatingGame, setIsSimulatingGame] = useState(false);
@@ -106,7 +107,7 @@ export default function DashboardView({ clubs, players, matches, stadiums, onNav
     setIsSimulatingGame(true);
   };
 
-  const planillasRecibidas = [
+  const planillasRecibidasMock = [
     {
       id: "plan-121",
       match: "C.S. Emelec vs Orense S.C.",
@@ -138,6 +139,38 @@ export default function DashboardView({ clubs, players, matches, stadiums, onNav
       stats: { posHome: "45%", posAway: "55%", shotsHome: 7, shotsAway: 14, foulsHome: 21, foulsAway: 11 }
     }
   ];
+
+  const getClubName = (id: string) => clubs.find(c => c.id === id)?.name || "Club";
+  const getStadiumName = (id: string) => stadiums.find(s => s.id === id)?.name || "Estadio";
+
+  const dynamicPlanillas = matches
+    .filter(m => m.status === "Finalizado" && m.homeScore !== undefined && m.awayScore !== undefined)
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .map(m => {
+      const seed = m.id.charCodeAt(m.id.length - 1);
+      const posHome = 40 + (seed % 20);
+      return {
+        id: `plan-${m.id.slice(0, 5)}`,
+        match: `${getClubName(m.homeTeamId)} vs ${getClubName(m.awayTeamId)}`,
+        result: `${m.homeScore} - ${m.awayScore}`,
+        venue: getStadiumName(m.stadiumId),
+        referee: m.refereeAppointed || "Juez Central",
+        time: m.date,
+        status: "Firmado Digitalmente",
+        stats: {
+          posHome: `${posHome}%`,
+          posAway: `${100 - posHome}%`,
+          shotsHome: 5 + (seed % 10),
+          shotsAway: 4 + ((seed + 3) % 10),
+          foulsHome: 10 + (seed % 8),
+          foulsAway: 12 + ((seed + 5) % 8)
+        }
+      };
+    });
+
+  // Combine so it always has at least the mocks, but real ones show up first
+  const allPlanillas = [...dynamicPlanillas, ...planillasRecibidasMock];
+  const previewPlanillas = allPlanillas.slice(0, 3);
 
   return (
     <div className="space-y-6">
@@ -444,7 +477,7 @@ export default function DashboardView({ clubs, players, matches, stadiums, onNav
             <p className="text-[10px] text-slate-500 font-mono mt-0.5">Sometidas por el comisario de juego al finalizar cada encuentro de la Jornada 11.</p>
           </div>
           <button 
-            onClick={() => onNavigate("plantel")}
+            onClick={() => setShowFullHistory(true)}
             className="text-xs font-bold text-[#CCFF00] hover:underline flex items-center gap-1"
           >
             Ver Historial Completo <ArrowRight size={12} />
@@ -465,7 +498,7 @@ export default function DashboardView({ clubs, players, matches, stadiums, onNav
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-900 font-medium">
-              {planillasRecibidas.map((p) => (
+              {previewPlanillas.map((p) => (
                 <tr key={p.id} className="hover:bg-slate-900/40 text-slate-300">
                   <td className="py-3 px-4 font-bold text-slate-200">{p.match}</td>
                   <td className="py-3 px-4 font-mono text-[#CCFF00]">{p.result}</td>
@@ -571,6 +604,72 @@ export default function DashboardView({ clubs, players, matches, stadiums, onNav
                   <Share2 size={12} /> Sincronizar
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full History Modal */}
+      {showFullHistory && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-40">
+          <div className="bg-slate-950 border border-slate-800 rounded-2xl w-full max-w-5xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl text-left">
+            <div className="bg-slate-900 px-5 py-4 border-b border-slate-800 flex items-center justify-between shrink-0">
+              <div>
+                <h4 className="text-sm font-black text-slate-100 flex items-center gap-2">
+                  <FileSpreadsheet size={16} className="text-[#CCFF00]"/> Historial Completo de Planillas
+                </h4>
+                <p className="text-[10px] font-mono text-slate-400 mt-0.5">Todas las planillas conciliadas y firmadas de la temporada actual.</p>
+              </div>
+              <button 
+                onClick={() => setShowFullHistory(false)}
+                className="p-1.5 rounded-lg bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-white transition"
+              >
+                <X size={15} />
+              </button>
+            </div>
+            
+            <div className="p-0 overflow-y-auto flex-1">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead className="sticky top-0 bg-slate-950 z-10 shadow-sm shadow-slate-950">
+                  <tr className="border-b border-slate-800 text-slate-500 font-mono text-[10px] uppercase">
+                    <th className="py-4 px-6 bg-slate-950">PARTIDO</th>
+                    <th className="py-4 px-6 bg-slate-950">RESULTADO</th>
+                    <th className="py-4 px-6 bg-slate-950">SEDE / ESTADIO</th>
+                    <th className="py-4 px-6 bg-slate-950">ÁRBITRO CENTRAL</th>
+                    <th className="py-4 px-6 bg-slate-950">ENVIADO</th>
+                    <th className="py-4 px-6 bg-slate-950">ESTADO CONCILIADO</th>
+                    <th className="py-4 px-6 bg-slate-950 text-right">ACCIONES</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/50 font-medium">
+                  {allPlanillas.map((p) => (
+                    <tr key={p.id} className="hover:bg-slate-900/60 text-slate-300 transition-colors">
+                      <td className="py-4 px-6 font-bold text-slate-200">{p.match}</td>
+                      <td className="py-4 px-6 font-mono text-[#CCFF00] text-sm">{p.result}</td>
+                      <td className="py-4 px-6 text-slate-400">{p.venue}</td>
+                      <td className="py-4 px-6 text-slate-400">{p.referee}</td>
+                      <td className="py-4 px-6 text-[10px] font-mono text-slate-500">{p.time}</td>
+                      <td className="py-4 px-6">
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[10px] font-mono uppercase font-bold border border-emerald-500/20">
+                          <CheckCircle2 size={10} /> {p.status}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6 text-right">
+                        <button 
+                          onClick={() => setShownPlanilla(p)} 
+                          className="px-3 py-1.5 bg-slate-900 text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700 rounded text-[10.5px] font-semibold transition shadow-sm"
+                        >
+                          Ver Ficha Detallada
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            
+            <div className="bg-slate-900 px-5 py-3 border-t border-slate-800 shrink-0 text-right">
+               <span className="text-[10px] text-slate-500 font-mono">Total de planillas: {allPlanillas.length}</span>
             </div>
           </div>
         </div>
