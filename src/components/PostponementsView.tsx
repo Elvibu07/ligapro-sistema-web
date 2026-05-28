@@ -1,6 +1,10 @@
 import React, { useState } from "react";
 import { Clock, AlertTriangle, FileUp, ListChecks, Check, X, ShieldAlert, FileText, Ban } from "lucide-react";
 import { Match, Club } from "../types";
+import ValidationBlockModal from "./ValidationBlockModal";
+import { validatePostponement } from "../lib/validations";
+import { logValidationBlock } from "../lib/services/auditLog";
+import type { ValidationResult } from "../lib/validations/types";
 
 interface PostponementsViewProps {
   matches: Match[];
@@ -10,6 +14,7 @@ interface PostponementsViewProps {
   postponements?: PostponementRequest[];
   onAddPostponement?: (req: Omit<PostponementRequest, 'id'>) => Promise<PostponementRequest>;
   onUpdatePostponement?: (id: string, updates: Partial<PostponementRequest>) => Promise<PostponementRequest>;
+  currentUserEmail?: string;
 }
 
 interface PostponementRequest {
@@ -31,9 +36,9 @@ export default function PostponementsView({
   userRole,
   postponements,
   onAddPostponement,
-  onUpdatePostponement
+  onUpdatePostponement,
+  currentUserEmail = "admin@ligapro.ec"
 }: PostponementsViewProps) {
-  // Local fallback if Supabase hook data not passed
   const [localRequests, setLocalRequests] = useState<PostponementRequest[]>([
     {
       id: "POST-102",
@@ -50,11 +55,14 @@ export default function PostponementsView({
 
   const activeRequests = postponements || localRequests;
 
+  // ─── Validation modal state ────────────────────────────────────────────────
+  const [validationError, setValidationError] = useState<ValidationResult | null>(null);
+
   // Form states
   const [selectedMatchId, setSelectedMatchId] = useState<string>(
     matches.filter(m => m.status === "Programado")[0]?.id || ""
   );
-  const [selectedReason, setSelectedReason] = useState<string>("Competencia internacional de clubes (CONMEBOL)");
+  const [selectedReason, setSelectedReason] = useState<string>("Compromiso Copa Libertadores / Sudamericana");
   const [proposedDate, setProposedDate] = useState<string>("2026-06-03");
   const [proposedTime, setProposedTime] = useState<string>("16:00");
   const [uploadedFile, setUploadedFile] = useState<string>("");
@@ -103,6 +111,21 @@ export default function PostponementsView({
     const matchObj = matches.find(m => m.id === selectedMatchId);
     if (!matchObj) return;
 
+    // ─── VALIDACIÓN 2.5 — Postergación (48h/24h) ────────────────────────────
+    const validation = validatePostponement(
+      matchObj.date,
+      matchObj.time,
+      proposedDate,
+      proposedTime,
+      uploadedFile !== ""
+    );
+
+    if (!validation.valid) {
+      setValidationError(validation);
+      logValidationBlock('2.5', 'Postergaciones', currentUserEmail, validation.message, validation.details);
+      return;
+    }
+
     const brandNew: PostponementRequest = {
       id: "POST-" + Math.floor(100 + Math.random() * 900),
       matchId: selectedMatchId,
@@ -110,7 +133,7 @@ export default function PostponementsView({
       reason: selectedReason,
       proposedDate: proposedDate,
       proposedTime: proposedTime,
-      fileName: uploadedFile || "peticion_comisaria_legal.pdf",
+      fileName: uploadedFile,
       status: "Pendiente",
       dateRequested: new Date().toISOString().split("T")[0]
     };
@@ -125,7 +148,6 @@ export default function PostponementsView({
     alert("Solicitud de postergación registrada formalmente en COMET. Evaluando por el tribunal deportivo...");
   };
 
-  // Administrator Action: Resolve Request
   const handleResolveRequest = (reqId: string, action: "Aprobado" | "Rechazado") => {
     if (onUpdatePostponement) {
       onUpdatePostponement(reqId, { status: action })
@@ -158,7 +180,6 @@ export default function PostponementsView({
       });
       setLocalRequests(resolvedReqs);
 
-      // If approved, modify the actual MATCH status and date/time
       if (action === "Aprobado") {
         const targetReq = activeRequests.find(r => r.id === reqId);
         if (targetReq) {
@@ -166,7 +187,7 @@ export default function PostponementsView({
             if (m.id === targetReq.matchId) {
               return {
                 ...m,
-                status: "Postergado" as const, // mark as postergado or reschedule immediately style
+                status: "Postergado" as const,
                 date: targetReq.proposedDate,
                 time: targetReq.proposedTime
               };
@@ -177,11 +198,17 @@ export default function PostponementsView({
         }
       }
     }
-    alert(`La solicitud ${reqId} ha sido marcada como ${action.toUpperCase()} con éxito.`);
   };
 
   return (
     <div className="space-y-6 text-left" id="postponements-view-container">
+      
+      {/* ─── VALIDATION BLOCK MODAL ──────────────────────────────────────────── */}
+      <ValidationBlockModal
+        validation={validationError}
+        onClose={() => setValidationError(null)}
+      />
+
       {/* Title */}
       <div className="border-b border-slate-800 pb-4">
         <h1 className="text-xl font-bold text-white tracking-tight flex items-center gap-2">
@@ -201,7 +228,7 @@ export default function PostponementsView({
               Formulario de Solicitud
             </span>
             <h3 className="text-xs text-slate-300 font-extrabold flex items-center gap-1.5 font-sans">
-              <AlertTriangle size={14} className="text-amber-500" /> Registro de Fuerza Mayor
+              <AlertTriangle size={14} className="text-amber-500" /> Registro de Fuerza Mayor (Art. 28)
             </h3>
 
             {/* Match select */}
@@ -291,7 +318,7 @@ export default function PostponementsView({
                   ) : (
                     <div className="mt-2 text-center">
                       <p className="text-[10px] text-slate-450 leading-tight">Drag & drop o haga Clic para subir PDF</p>
-                      <span className="text-[8px] font-mono text-slate-600 block mt-1">Límite 10MB • Autorización FEF</span>
+                      <span className="text-[8px] font-mono text-slate-600 block mt-1">Límite 10MB • Obligatorio para avalar</span>
                     </div>
                   )}
                 </label>
@@ -354,7 +381,6 @@ export default function PostponementsView({
                         <td className="py-4 px-3 text-right">
                           {r.status === "Pendiente" ? (
                             <div className="flex justify-end gap-1.5">
-                              {/* If user is general admin, allow changing state immediately */}
                               {userRole === "Administrador General" ? (
                                 <>
                                   <button 
@@ -387,11 +413,10 @@ export default function PostponementsView({
               </table>
             </div>
 
-            {/* Legend info warning */}
             <div className="mt-4 p-3.5 bg-slate-900 rounded-xl border border-slate-850 flex items-center space-x-2.5">
               <ShieldAlert className="text-amber-500 shrink-0" size={18} />
               <div className="text-[11px] font-sans text-slate-400 leading-relaxed">
-                <strong>Cláusula de Postergaciones:</strong> Las reprogramaciones autorizadas modifican los relojes globales COMET. Ambas directivas del club correspondiente recibirán copias de la credencial encriptada de forma inmediata.
+                <strong>Cláusula de Postergaciones (Art. 28):</strong> Las reprogramaciones autorizadas modifican los relojes globales COMET y requieren justificación dentro del plazo de 48h con desfase máximo de 24h.
               </div>
             </div>
 

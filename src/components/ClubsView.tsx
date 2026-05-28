@@ -14,9 +14,22 @@ import {
   FileText, 
   Trash2,
   Calendar,
-  Sparkles
+  Sparkles,
+  Stethoscope,
+  GraduationCap,
+  DollarSign,
+  ShieldAlert
 } from "lucide-react";
-import { Club, ClubStatus } from "../types";
+import { Club, ClubStatus, ClubStaff, ClubEconomicApproval, Sanction } from "../types";
+import ValidationBlockModal from "./ValidationBlockModal";
+import {
+  validateClubHasMedico,
+  validateClubHasDT,
+  validateClubEconomicApproval,
+  validateClubNoActiveSanction,
+} from "../lib/validations";
+import { logValidationBlock } from "../lib/services/auditLog";
+import type { ValidationResult } from "../lib/validations/types";
 
 interface ClubsViewProps {
   clubs: Club[];
@@ -24,13 +37,54 @@ interface ClubsViewProps {
   onAddClub?: (club: Omit<Club, 'id' | 'squadCount'>) => Promise<Club>;
   onUpdateClub?: (id: string, updates: Partial<Club>) => Promise<Club>;
   onDeleteClub?: (id: string) => Promise<void>;
+  sanctions?: Sanction[];
+  currentUserEmail?: string;
 }
 
-export default function ClubsView({ clubs, onClubsChange, onAddClub, onUpdateClub, onDeleteClub }: ClubsViewProps) {
+// ─── Mock data for club staff & economic approvals (simulated until Supabase table is seeded) ─
+const MOCK_CLUB_STAFF: Record<string, ClubStaff[]> = {
+  "barcelona-sc": [
+    { id: "staff-1", clubId: "barcelona-sc", name: "Dr. Roberto Medina", role: "Médico", status: "Activo" },
+    { id: "staff-2", clubId: "barcelona-sc", name: "Segundo Alejandro Castillo", role: "Director Técnico", status: "Activo" },
+  ],
+  "ldu-quito": [
+    { id: "staff-3", clubId: "ldu-quito", name: "Dr. Luis Ramírez", role: "Médico", status: "Activo" },
+    { id: "staff-4", clubId: "ldu-quito", name: "Pablo Marini", role: "Director Técnico", status: "Activo" },
+  ],
+  "ind-valle": [
+    { id: "staff-5", clubId: "ind-valle", name: "Dr. Felipe Suárez", role: "Médico", status: "Activo" },
+    { id: "staff-6", clubId: "ind-valle", name: "Martín Anselmi", role: "Director Técnico", status: "Activo" },
+  ],
+  "emelec": [
+    { id: "staff-7", clubId: "emelec", name: "Dr. Jorge Meza", role: "Médico", status: "Activo" },
+    // No DT — will trigger validation 1.2
+  ],
+  "el-nacional": [
+    // No medico and no DT — will trigger validations 1.1 and 1.2
+  ],
+  "aucas": [
+    { id: "staff-10", clubId: "aucas", name: "Dr. Carlos Villacís", role: "Médico", status: "Activo" },
+    { id: "staff-11", clubId: "aucas", name: "Armando Osma", role: "Director Técnico", status: "Activo" },
+  ],
+};
+
+const MOCK_ECONOMIC_APPROVALS: Record<string, ClubEconomicApproval> = {
+  "barcelona-sc": { id: "eco-1", clubId: "barcelona-sc", approved: true, approvedBy: "Dir. Control Económico", approvedDate: "2026-01-15", season: "2026" },
+  "ldu-quito": { id: "eco-2", clubId: "ldu-quito", approved: true, approvedBy: "Dir. Control Económico", approvedDate: "2026-01-20", season: "2026" },
+  "ind-valle": { id: "eco-3", clubId: "ind-valle", approved: true, approvedBy: "Dir. Control Económico", approvedDate: "2026-02-01", season: "2026" },
+  "emelec": { id: "eco-4", clubId: "emelec", approved: false, approvedBy: "", approvedDate: "", season: "2026" },
+  "el-nacional": { id: "eco-5", clubId: "el-nacional", approved: false, approvedBy: "", approvedDate: "", season: "2026" },
+  "aucas": { id: "eco-6", clubId: "aucas", approved: true, approvedBy: "Dir. Control Económico", approvedDate: "2026-01-25", season: "2026" },
+};
+
+export default function ClubsView({ clubs, onClubsChange, onAddClub, onUpdateClub, onDeleteClub, sanctions = [], currentUserEmail = "admin@ligapro.ec" }: ClubsViewProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("Todos");
   const [showAddDrawer, setShowAddDrawer] = useState(false);
   const [auditedClub, setAuditedClub] = useState<Club | null>(null);
+
+  // ─── Validation modal state ────────────────────────────────────────────────
+  const [validationError, setValidationError] = useState<ValidationResult | null>(null);
 
   // Form State for New Club
   const [newName, setNewName] = useState("");
@@ -112,6 +166,49 @@ export default function ClubsView({ clubs, onClubsChange, onAddClub, onUpdateClu
   const observedCount = clubs.filter(c => c.status === "Observado").length;
   const pendingCount = clubs.filter(c => c.status === "Pendiente").length;
 
+  /**
+   * ─── VALIDACIONES 1.1, 1.2, 1.3, 1.4 — Habilitación de Club ─────────────
+   * Se ejecutan antes de cambiar el estado a "Habilitado".
+   */
+  const runClubEnableValidations = (clubId: string, clubName: string): boolean => {
+    const staff = MOCK_CLUB_STAFF[clubId] || [];
+    const economicApproval = MOCK_ECONOMIC_APPROVALS[clubId] || null;
+
+    // 1.1 — Médico obligatorio
+    const medicoResult = validateClubHasMedico(staff);
+    if (!medicoResult.valid) {
+      setValidationError(medicoResult);
+      logValidationBlock('1.1', 'Clubes', currentUserEmail, medicoResult.message, { clubId, clubName });
+      return false;
+    }
+
+    // 1.2 — DT obligatorio
+    const dtResult = validateClubHasDT(staff);
+    if (!dtResult.valid) {
+      setValidationError(dtResult);
+      logValidationBlock('1.2', 'Clubes', currentUserEmail, dtResult.message, { clubId, clubName });
+      return false;
+    }
+
+    // 1.3 — Aprobación económica
+    const ecoResult = validateClubEconomicApproval(economicApproval);
+    if (!ecoResult.valid) {
+      setValidationError(ecoResult);
+      logValidationBlock('1.3', 'Clubes', currentUserEmail, ecoResult.message, { clubId, clubName });
+      return false;
+    }
+
+    // 1.4 — Sanción activa
+    const sanctionResult = validateClubNoActiveSanction(sanctions, clubName);
+    if (!sanctionResult.valid) {
+      setValidationError(sanctionResult);
+      logValidationBlock('1.4', 'Clubes', currentUserEmail, sanctionResult.message, { clubId, clubName });
+      return false;
+    }
+
+    return true;
+  };
+
   const handleToggleDoc = async (clubId: string, docKey: "estatutos" | "solvencia" | "ministerioDeporte" | "registroLigaPro") => {
     const targetClub = clubs.find(c => c.id === clubId);
     if (!targetClub) return;
@@ -123,7 +220,13 @@ export default function ClubsView({ clubs, onClubsChange, onAddClub, onUpdateClu
     const allChecked = docStatus.estatutos && docStatus.solvencia && docStatus.ministerioDeporte && docStatus.registroLigaPro;
     
     if (allChecked) {
-      newStatus = "Habilitado";
+      // ─── Run LIGAPRO validations before auto-enabling ─────────────────────
+      if (!runClubEnableValidations(clubId, targetClub.name)) {
+        // Validations failed — still update docs but don't auto-enable
+        newStatus = "Observado";
+      } else {
+        newStatus = "Habilitado";
+      }
     } else if (docStatus.estatutos && docStatus.ministerioDeporte) {
       newStatus = "Observado";
     } else {
@@ -154,6 +257,14 @@ export default function ClubsView({ clubs, onClubsChange, onAddClub, onUpdateClu
   };
 
   const handleUpdateStatus = async (clubId: string, newStatus: ClubStatus) => {
+    // ─── VALIDACIONES 1.1-1.4: Bloquear habilitación si no cumple requisitos ─
+    if (newStatus === "Habilitado") {
+      const targetClub = clubs.find(c => c.id === clubId);
+      if (targetClub && !runClubEnableValidations(clubId, targetClub.name)) {
+        return; // Blocked by validation
+      }
+    }
+
     if (onUpdateClub) {
       try {
         const updated = await onUpdateClub(clubId, { status: newStatus });
@@ -268,9 +379,19 @@ export default function ClubsView({ clubs, onClubsChange, onAddClub, onUpdateClu
     return matchesSearch && c.status === statusFilter;
   });
 
+  // Helper to get staff info for a club
+  const getClubStaff = (clubId: string) => MOCK_CLUB_STAFF[clubId] || [];
+  const getClubEconomicApproval = (clubId: string) => MOCK_ECONOMIC_APPROVALS[clubId] || null;
+
   return (
     <div className="space-y-6">
       
+      {/* ─── VALIDATION BLOCK MODAL ──────────────────────────────────────────── */}
+      <ValidationBlockModal
+        validation={validationError}
+        onClose={() => setValidationError(null)}
+      />
+
       {/* Title */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-slate-800 pb-4">
         <div>
@@ -341,7 +462,14 @@ export default function ClubsView({ clubs, onClubsChange, onAddClub, onUpdateClu
 
       {/* Clubs Grid layout */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredClubs.map((club) => (
+        {filteredClubs.map((club) => {
+          const staff = getClubStaff(club.id);
+          const hasMedico = staff.some(s => s.role === 'Médico' && s.status === 'Activo');
+          const hasDT = staff.some(s => s.role === 'Director Técnico' && s.status === 'Activo');
+          const eco = getClubEconomicApproval(club.id);
+          const hasEco = eco?.approved || false;
+
+          return (
           <div key={club.id} className="bg-slate-950 border border-slate-850 rounded-2xl overflow-hidden text-left flex flex-col justify-between hover:border-slate-850 shadow-md">
             
             {/* Header portion */}
@@ -380,6 +508,19 @@ export default function ClubsView({ clubs, onClubsChange, onAddClub, onUpdateClu
                   <span className="text-slate-500">Estadio Principal:</span>
                   <span className="font-semibold text-slate-300 truncate max-w-[150px]">{club.stadium || "No definido"}</span>
                 </div>
+              </div>
+
+              {/* ─── LIGAPRO Compliance Indicators ────────────────────────── */}
+              <div className="flex gap-1.5 mb-3">
+                <span title="Médico" className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 ${hasMedico ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                  <Stethoscope size={9} /> MED
+                </span>
+                <span title="Director Técnico" className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 ${hasDT ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                  <GraduationCap size={9} /> DT
+                </span>
+                <span title="Aprobación Económica" className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5 ${hasEco ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'}`}>
+                  <DollarSign size={9} /> ECO
+                </span>
               </div>
             </div>
 
@@ -452,7 +593,8 @@ export default function ClubsView({ clubs, onClubsChange, onAddClub, onUpdateClu
             </div>
 
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Add New Club Side Drawer / Dialog Popup */}
@@ -784,8 +926,67 @@ export default function ClubsView({ clubs, onClubsChange, onAddClub, onUpdateClu
                 </div>
               </form>
             ) : (
-              <div className="p-5 space-y-4 text-xs text-slate-300">
+              <div className="p-5 space-y-4 text-xs text-slate-300 max-h-[70vh] overflow-y-auto">
                 
+                {/* ─── LIGAPRO Staff & Economic Status ────────────────────── */}
+                <div className="space-y-2">
+                  <span className="text-[10px] font-mono text-[#CCFF00] uppercase tracking-widest block select-none font-bold">
+                    Requisitos Reglamento LIGAPRO
+                  </span>
+                  
+                  {(() => {
+                    const staff = getClubStaff(auditedClub.id);
+                    const eco = getClubEconomicApproval(auditedClub.id);
+                    const hasMed = staff.some(s => s.role === 'Médico' && s.status === 'Activo');
+                    const hasDt = staff.some(s => s.role === 'Director Técnico' && s.status === 'Activo');
+                    const dtName = staff.find(s => s.role === 'Director Técnico')?.name || 'No registrado';
+                    const medName = staff.find(s => s.role === 'Médico')?.name || 'No registrado';
+                    
+                    return (
+                      <div className="grid grid-cols-1 gap-2">
+                        <div className={`flex items-center justify-between p-2.5 rounded-lg border ${hasMed ? 'bg-emerald-500/5 border-emerald-500/15' : 'bg-red-500/5 border-red-500/15'}`}>
+                          <div className="flex items-center gap-2">
+                            <Stethoscope size={13} className={hasMed ? 'text-emerald-400' : 'text-red-400'} />
+                            <div>
+                              <span className="text-slate-200 font-semibold block">Médico del Club</span>
+                              <span className="text-[10px] text-slate-500">{medName}</span>
+                            </div>
+                          </div>
+                          <span className={`text-[9px] font-mono font-bold ${hasMed ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {hasMed ? 'REGISTRADO ✓' : 'FALTA ✗'}
+                          </span>
+                        </div>
+                        
+                        <div className={`flex items-center justify-between p-2.5 rounded-lg border ${hasDt ? 'bg-emerald-500/5 border-emerald-500/15' : 'bg-red-500/5 border-red-500/15'}`}>
+                          <div className="flex items-center gap-2">
+                            <GraduationCap size={13} className={hasDt ? 'text-emerald-400' : 'text-red-400'} />
+                            <div>
+                              <span className="text-slate-200 font-semibold block">Director Técnico</span>
+                              <span className="text-[10px] text-slate-500">{dtName}</span>
+                            </div>
+                          </div>
+                          <span className={`text-[9px] font-mono font-bold ${hasDt ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {hasDt ? 'REGISTRADO ✓' : 'FALTA ✗'}
+                          </span>
+                        </div>
+                        
+                        <div className={`flex items-center justify-between p-2.5 rounded-lg border ${eco?.approved ? 'bg-emerald-500/5 border-emerald-500/15' : 'bg-red-500/5 border-red-500/15'}`}>
+                          <div className="flex items-center gap-2">
+                            <DollarSign size={13} className={eco?.approved ? 'text-emerald-400' : 'text-red-400'} />
+                            <div>
+                              <span className="text-slate-200 font-semibold block">Control Económico</span>
+                              <span className="text-[10px] text-slate-500">{eco?.approved ? `Aprobado: ${eco.approvedDate}` : 'Sin aprobación'}</span>
+                            </div>
+                          </div>
+                          <span className={`text-[9px] font-mono font-bold ${eco?.approved ? 'text-emerald-400' : 'text-red-400'}`}>
+                            {eco?.approved ? 'APROBADO ✓' : 'PENDIENTE ✗'}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
                 {/* Document states with toggles */}
                 <div className="space-y-3">
                   <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest block select-none">Modificaciones de Validación</span>

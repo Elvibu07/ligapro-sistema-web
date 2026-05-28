@@ -97,7 +97,7 @@ export default function App() {
       return changed ? updated : prev;
     });
   }, [setPlayers]);
-  const { matches, setMatches, add: addMatch, update: updateMatch } = useMatches(initialMatches);
+  const { matches, setMatches, add: addMatch, update: updateMatch, remove: removeMatch } = useMatches(initialMatches);
   const { sanctions, setSanctions, add: addSanction, update: updateSanction } = useSanctions(initialSanctions);
   const { stadiums, setStadiums, update: updateStadium } = useStadiums(initialStadiums);
   const { postponements, add: addPostponement, update: updatePostponement } = usePostponements([
@@ -188,6 +188,8 @@ export default function App() {
             onAddClub={addClub}
             onUpdateClub={updateClub}
             onDeleteClub={removeClub}
+            sanctions={sanctions}
+            currentUserEmail={authUser.email}
           />
         );
       case "posiciones":
@@ -214,6 +216,7 @@ export default function App() {
             postponements={postponements}
             onAddPostponement={addPostponement}
             onUpdatePostponement={updatePostponement}
+            currentUserEmail={authUser.email}
           />
         );
       case "planillas":
@@ -222,6 +225,7 @@ export default function App() {
             matches={matches}
             clubs={clubs}
             players={players}
+            currentUserEmail={authUser.email}
           />
         );
       case "plantel":
@@ -253,6 +257,9 @@ export default function App() {
             onMatchesChange={setMatches}
             onAddMatch={addMatch}
             onUpdateMatch={updateMatch}
+            onDeleteMatch={removeMatch}
+            sanctions={sanctions}
+            currentUserEmail={authUser.email}
           />
         );
       case "uniformes":

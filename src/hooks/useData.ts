@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getClubs, createClub, updateClub, deleteClub } from '../lib/services/clubs';
 import { getPlayers, createPlayer, updatePlayer, deletePlayer } from '../lib/services/players';
-import { getMatches, createMatch, updateMatch } from '../lib/services/matches';
+import { getMatches, createMatch, updateMatch, deleteMatch } from '../lib/services/matches';
 import { getSanctions, createSanction, updateSanction } from '../lib/services/sanctions';
 import { getStadiums, createStadium, updateStadium } from '../lib/services/stadiums';
 import { getPostponements, createPostponement, updatePostponement } from '../lib/services/postponements';
@@ -273,7 +273,19 @@ export function useMatches(fallback: Match[]) {
     }
   }, []);
 
-  return { matches, setMatches, loading, error, add, update, reload: load };
+  const remove = useCallback(async (id: string) => {
+    try {
+      await deleteMatch(id);
+      setMatches(prev => prev.filter(m => m.id !== id));
+      dispatchNotification(`Partido eliminado`, 'programacion', 'programacion');
+    } catch (e: any) {
+      console.warn('Supabase delete match error, using local fallback:', e.message);
+      setMatches(prev => prev.filter(m => m.id !== id));
+      dispatchNotification(`Partido eliminado (Local)`, 'programacion', 'programacion');
+    }
+  }, []);
+
+  return { matches, setMatches, loading, error, add, update, remove, reload: load };
 }
 
 // ─── useSanctions ─────────────────────────────────────────────────────────────

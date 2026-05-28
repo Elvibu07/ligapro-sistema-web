@@ -17,7 +17,19 @@ import {
   Globe,
   Trophy
 } from "lucide-react";
-import { Match, Club, Stadium } from "../types";
+import { Match, Club, Stadium, Sanction } from "../types";
+import ValidationBlockModal from "./ValidationBlockModal";
+import {
+  validateMatchDateNotInPast,
+  validateMatch15DayNotice,
+  validateMatchNotOnFifaDate,
+  validateUnifiedSchedule,
+  validateClubNoActiveSanction,
+  validateClubHomeStadium,
+  FIFA_DATES_2026,
+} from "../lib/validations";
+import { logValidationBlock } from "../lib/services/auditLog";
+import type { ValidationResult } from "../lib/validations/types";
 
 interface MatchesViewProps {
   matches: Match[];
@@ -26,20 +38,62 @@ interface MatchesViewProps {
   onMatchesChange: (updatedMatches: Match[]) => void;
   onAddMatch?: (match: Omit<Match, 'id'>) => Promise<Match>;
   onUpdateMatch?: (id: string, updates: Partial<Match>) => Promise<Match>;
+  onDeleteMatch?: (id: string) => Promise<void>;
+  sanctions?: Sanction[];
+  currentUserEmail?: string;
 }
 
-export default function MatchesView({ matches, clubs, stadiums, onMatchesChange, onAddMatch, onUpdateMatch }: MatchesViewProps) {
+export default function MatchesView({ matches, clubs, stadiums, onMatchesChange, onAddMatch, onUpdateMatch, onDeleteMatch, sanctions = [], currentUserEmail = "admin@ligapro.ec" }: MatchesViewProps) {
   const [showAddMatchForm, setShowAddMatchForm] = useState(false);
   const [activeTab, setActiveTab] = useState<"lista" | "mapa">("lista");
   const [editingMatchResult, setEditingMatchResult] = useState<Match | null>(null);
+  const [editingMatchId, setEditingMatchId] = useState<string | null>(null);
+
+  // ─── Validation modal state ────────────────────────────────────────────────
+  const [validationError, setValidationError] = useState<ValidationResult | null>(null);
 
   // Form State
   const [newHome, setNewHome] = useState("barcelona-sc");
   const [newAway, setNewAway] = useState("ldu-quito");
   const [newStadium, setNewStadium] = useState("monumental");
-  const [newDate, setNewDate] = useState("2026-05-24");
+  const [newDate, setNewDate] = useState("2026-07-24");
   const [newTime, setNewTime] = useState("18:00");
   const [newChannel, setNewChannel] = useState("Zapping Sports");
+  const [newSerie, setNewSerie] = useState<'A' | 'B'>('A');
+
+  const openEditForm = (m: Match) => {
+    setEditingMatchId(m.id);
+    setNewHome(m.homeTeamId);
+    setNewAway(m.awayTeamId);
+    setNewStadium(m.stadiumId);
+    setNewDate(m.date);
+    setNewTime(m.time);
+    setNewChannel(m.tvChannel || "");
+    setNewSerie(m.serie || 'A');
+    setShowAddMatchForm(true);
+  };
+
+  const openCreateForm = () => {
+    setEditingMatchId(null);
+    setNewHome("barcelona-sc");
+    setNewAway("ldu-quito");
+    setNewStadium("monumental");
+    setNewDate("2026-07-24");
+    setNewTime("18:00");
+    setNewChannel("Zapping Sports");
+    setNewSerie('A');
+    setShowAddMatchForm(true);
+  };
+
+  const handleDeleteMatch = (id: string) => {
+    if (window.confirm("¿Estás seguro de eliminar este partido? Esta acción es irreversible.")) {
+      if (onDeleteMatch) {
+        onDeleteMatch(id).catch(err => console.error("Error deleting match:", err));
+      } else {
+        onMatchesChange(matches.filter(m => m.id !== id));
+      }
+    }
+  };
 
   const handleToggleLogistics = (matchId: string, key: "seguridadOk" | "ambulanciaOk" | "transmisionTvOk" | "certificacionVarOk" | "balonerosOk") => {
     if (onUpdateMatch) {
@@ -75,6 +129,97 @@ export default function MatchesView({ matches, clubs, stadiums, onMatchesChange,
       return;
     }
 
+    // ─── VALIDACIÓN 2.1 — Fecha en el pasado ────────────────────────────────
+    const pastResult = validateMatchDateNotInPast(newDate);
+    if (!pastResult.valid) {
+      setValidationError(pastResult);
+      logValidationBlock('2.1', 'Programación', currentUserEmail, pastResult.message, pastResult.details);
+      return;
+    }
+
+    // ─── VALIDACIÓN 2.2 — Notificación mínima de 15 días ───────────────────
+    const noticeResult = validateMatch15DayNotice(newDate);
+    if (!noticeResult.valid) {
+      setValidationError(noticeResult);
+      logValidationBlock('2.2', 'Programación', currentUserEmail, noticeResult.message, noticeResult.details);
+      return;
+    }
+
+    // ─── VALIDACIÓN 2.3 — Jornada FIFA bloqueada para Serie A ───────────────
+    const fifaResult = validateMatchNotOnFifaDate(newDate, newSerie, FIFA_DATES_2026);
+    if (!fifaResult.valid) {
+      setValidationError(fifaResult);
+      logValidationBlock('2.3', 'Programación', currentUserEmail, fifaResult.message, fifaResult.details);
+      return;
+    }
+
+    // ─── VALIDACIÓN 2.4 — Horario unificado en últimas dos fechas ───────────
+    const currentRound = 12; // Will be dynamic in full implementation
+    const totalRoundsInPhase = 22;
+    const scheduleResult = validateUnifiedSchedule(
+      currentRound, newTime, totalRoundsInPhase,
+      matches.filter(m => m.round === currentRound)
+    );
+    if (!scheduleResult.valid) {
+      setValidationError(scheduleResult);
+      logValidationBlock('2.4', 'Programación', currentUserEmail, scheduleResult.message, scheduleResult.details);
+      return;
+    }
+
+    // ─── VALIDACIÓN 1.4 — Sanciones activas en clubes ───────────────────────
+    const homeClub = clubs.find(c => c.id === newHome);
+    const awayClub = clubs.find(c => c.id === newAway);
+
+    // ─── VALIDACIÓN: ESTADO HABILITADO ──────────────────────────────────────
+    if (homeClub && homeClub.status !== "Habilitado") {
+      setValidationError({
+        valid: false,
+        ruleCode: '1.0',
+        message: `El club local (${homeClub.name}) no se encuentra Habilitado para programar partidos. Estado actual: ${homeClub.status}.`,
+      });
+      logValidationBlock('1.0', 'Programación', currentUserEmail, 'Club local no habilitado', { club: homeClub.shortName });
+      return;
+    }
+    if (awayClub && awayClub.status !== "Habilitado") {
+      setValidationError({
+        valid: false,
+        ruleCode: '1.0',
+        message: `El club visitante (${awayClub.name}) no se encuentra Habilitado para programar partidos. Estado actual: ${awayClub.status}.`,
+      });
+      logValidationBlock('1.0', 'Programación', currentUserEmail, 'Club visitante no habilitado', { club: awayClub.shortName });
+      return;
+    }
+    
+    if (homeClub) {
+      const homeSanctionResult = validateClubNoActiveSanction(sanctions, homeClub.shortName);
+      if (!homeSanctionResult.valid) {
+        setValidationError(homeSanctionResult);
+        logValidationBlock('1.4', 'Programación', currentUserEmail, homeSanctionResult.message, { club: homeClub.shortName });
+        return;
+      }
+    }
+    if (awayClub) {
+      const awaySanctionResult = validateClubNoActiveSanction(sanctions, awayClub.shortName);
+      if (!awaySanctionResult.valid) {
+        setValidationError(awaySanctionResult);
+        logValidationBlock('1.4', 'Programación', currentUserEmail, awaySanctionResult.message, { club: awayClub.shortName });
+        return;
+      }
+    }
+
+    // ─── VALIDACIÓN 1.5 — Cesión de localía ─────────────────────────────────
+    if (homeClub) {
+      const selectedStadium = stadiums.find(s => s.id === newStadium);
+      if (selectedStadium && homeClub.stadium) {
+        const localiaResult = validateClubHomeStadium(homeClub.stadium, selectedStadium.name);
+        if (!localiaResult.valid) {
+          setValidationError(localiaResult);
+          logValidationBlock('1.5', 'Programación', currentUserEmail, localiaResult.message, localiaResult.details);
+          return;
+        }
+      }
+    }
+
     const brandNewMatch: Match = {
       id: "match-" + Date.now(),
       homeTeamId: newHome,
@@ -85,6 +230,9 @@ export default function MatchesView({ matches, clubs, stadiums, onMatchesChange,
       status: "Programado",
       round: 12,
       tvChannel: newChannel,
+      serie: newSerie,
+      phase: "Primera Etapa",
+      totalRoundsInPhase: 22,
       logistics: {
         seguridadOk: false,
         ambulanciaOk: false,
@@ -94,11 +242,19 @@ export default function MatchesView({ matches, clubs, stadiums, onMatchesChange,
       }
     };
 
-    if (onAddMatch) {
-      const { id, ...matchData } = brandNewMatch;
-      onAddMatch(matchData).catch(err => console.error("Error creating match:", err));
+    if (editingMatchId) {
+      if (onUpdateMatch) {
+        onUpdateMatch(editingMatchId, brandNewMatch).catch(err => console.error("Error updating match:", err));
+      } else {
+        onMatchesChange(matches.map(m => m.id === editingMatchId ? { ...m, ...brandNewMatch, id: editingMatchId } : m));
+      }
     } else {
-      onMatchesChange([...matches, brandNewMatch]);
+      if (onAddMatch) {
+        const { id, ...matchData } = brandNewMatch;
+        onAddMatch(matchData).catch(err => console.error("Error creating match:", err));
+      } else {
+        onMatchesChange([...matches, brandNewMatch]);
+      }
     }
     setShowAddMatchForm(false);
   };
@@ -115,6 +271,12 @@ export default function MatchesView({ matches, clubs, stadiums, onMatchesChange,
   return (
     <div className="space-y-6 text-left">
       
+      {/* ─── VALIDATION BLOCK MODAL ──────────────────────────────────────────── */}
+      <ValidationBlockModal
+        validation={validationError}
+        onClose={() => setValidationError(null)}
+      />
+
       {/* Title */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-slate-800 pb-4">
         <div>
@@ -129,7 +291,7 @@ export default function MatchesView({ matches, clubs, stadiums, onMatchesChange,
             {activeTab === "lista" ? "Ver Geografía Altitudes" : "Ver Cuadrícula Logística"}
           </button>
           <button
-            onClick={() => setShowAddMatchForm(true)}
+            onClick={openCreateForm}
             className="flex items-center gap-1.5 px-4 py-2 bg-[#CCFF00] text-slate-950 font-extrabold rounded-lg text-xs hover:bg-[#b0dc00] transition active:scale-95"
           >
             <Plus size={14} /> Programar Partido
@@ -161,6 +323,11 @@ export default function MatchesView({ matches, clubs, stadiums, onMatchesChange,
                            DUELO #{m.round}
                         </span>
                         <span className="text-slate-500 font-mono text-[10px]">{m.date} a las {m.time}</span>
+                        {m.serie && (
+                          <span className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded ${m.serie === 'A' ? 'bg-[#CCFF00]/10 text-[#CCFF00]' : 'bg-cyan-500/10 text-cyan-400'}`}>
+                            Serie {m.serie}
+                          </span>
+                        )}
                       </div>
                       <p className="text-sm font-black text-slate-100 flex items-center gap-2">
                         {getClubShortName(m.homeTeamId)} 
@@ -252,6 +419,21 @@ export default function MatchesView({ matches, clubs, stadiums, onMatchesChange,
                       >
                         {m.status === 'Finalizado' ? 'Editar Resultado' : 'Registrar Resultado'}
                       </button>
+                      
+                      <div className="flex gap-1.5 w-full mt-1.5">
+                        <button 
+                          onClick={() => openEditForm(m)}
+                          className="flex-1 text-[10px] font-bold px-2 py-1.5 bg-slate-800 text-slate-300 hover:bg-slate-700 rounded transition-colors"
+                        >
+                          Editar Partido
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteMatch(m.id)}
+                          className="text-[10px] font-bold px-2.5 py-1.5 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded transition-colors"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
                     </div>
 
                   </div>
@@ -318,9 +500,9 @@ export default function MatchesView({ matches, clubs, stadiums, onMatchesChange,
           >
             <div className="bg-slate-900 px-5 py-4 border-b border-slate-800 flex items-center justify-between">
               <div>
-                <span className="text-[9px] font-mono text-[#CCFF00] uppercase block">Programar Duelo</span>
+                <span className="text-[9px] font-mono text-[#CCFF00] uppercase block">{editingMatchId ? "Editar Duelo" : "Programar Duelo"}</span>
                 <h3 className="text-sm font-black text-slate-100 flex items-center gap-1.5 font-sans">
-                  <CalendarDays size={16} /> REGISTRO DE DUELO - SERIE A LIGAPRO
+                  <CalendarDays size={16} /> {editingMatchId ? "EDICIÓN DE PARTIDO - LIGAPRO" : "REGISTRO DE DUELO - LIGAPRO"}
                 </h3>
               </div>
               <button 
@@ -334,6 +516,27 @@ export default function MatchesView({ matches, clubs, stadiums, onMatchesChange,
 
             <div className="p-5 space-y-4 text-xs">
               
+              {/* Serie selector */}
+              <div>
+                <label className="block text-slate-400 font-medium mb-1">Serie del Campeonato *</label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setNewSerie('A')}
+                    className={`flex-1 py-2 rounded-lg font-bold text-xs transition ${newSerie === 'A' ? 'bg-[#CCFF00] text-slate-950' : 'bg-slate-900 text-slate-400 border border-slate-800 hover:text-white'}`}
+                  >
+                    Serie A
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewSerie('B')}
+                    className={`flex-1 py-2 rounded-lg font-bold text-xs transition ${newSerie === 'B' ? 'bg-cyan-500 text-slate-950' : 'bg-slate-900 text-slate-400 border border-slate-800 hover:text-white'}`}
+                  >
+                    Serie B
+                  </button>
+                </div>
+              </div>
+
               {/* Teams row */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -405,6 +608,16 @@ export default function MatchesView({ matches, clubs, stadiums, onMatchesChange,
                 </div>
               </div>
 
+              {/* ─── Validation info banner ─────────────────────────────────── */}
+              <div className="p-3 bg-slate-900/60 rounded-xl border border-slate-800/50 text-[10px] text-slate-500 font-mono space-y-1">
+                <p className="flex items-center gap-1"><ShieldAlert size={10} className="text-amber-500" /> Validaciones automáticas LIGAPRO activas:</p>
+                <p className="ml-3">• Fecha no puede estar en el pasado (Art. 25)</p>
+                <p className="ml-3">• Mínimo 15 días de anticipación (Art. 25)</p>
+                <p className="ml-3">• Bloqueo de jornadas FIFA para Serie A (Art. 26)</p>
+                <p className="ml-3">• Horario unificado últimas 2 fechas (Art. 27)</p>
+                <p className="ml-3">• Verificación de sanciones activas y localía</p>
+              </div>
+
             </div>
 
             <div className="bg-slate-900 px-5 py-3 border-t border-slate-800 flex justify-end space-x-2">
@@ -419,7 +632,7 @@ export default function MatchesView({ matches, clubs, stadiums, onMatchesChange,
                 type="submit"
                 className="px-4 py-1.5 bg-[#CCFF00] text-slate-950 font-extrabold rounded text-xs hover:bg-[#b0dc00] transition"
               >
-                Guardar Partido
+                {editingMatchId ? "Guardar Cambios" : "Guardar Partido"}
               </button>
             </div>
           </form>

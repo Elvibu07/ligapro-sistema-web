@@ -21,6 +21,43 @@ export interface Club {
   squadCount: number;
 }
 
+// ─── Staff del Club (Médicos, DT, Cuerpo Técnico) ──────────────────────────
+export interface ClubStaff {
+  id: string;
+  clubId: string;
+  name: string;
+  role: 'Médico' | 'Director Técnico' | 'Asistente' | 'Preparador Físico' | 'Otro';
+  status: 'Activo' | 'Inactivo';
+}
+
+// ─── Aprobación Económica del Club ──────────────────────────────────────────
+export interface ClubEconomicApproval {
+  id: string;
+  clubId: string;
+  approved: boolean;
+  approvedBy: string;
+  approvedDate: string;
+  season: string;
+}
+
+// ─── Jornadas FIFA (Calendario Internacional Bloqueado) ─────────────────────
+export interface JornadaFifa {
+  id: string;
+  startDate: string;
+  endDate: string;
+  description: string;
+  season: string;
+}
+
+// ─── Log de Auditoría ────────────────────────────────────────────────────────
+export interface AuditLogEntry {
+  action: string;
+  module: string;
+  userEmail: string;
+  reason: string;
+  details?: Record<string, any>;
+}
+
 export interface Player {
   id: string;
   clubId: string;
@@ -58,6 +95,7 @@ export interface Sanction {
   matchesSuspended: number;
   dateEmitted: string;
   resolved: boolean;
+  endDate?: string;
   appealDetails?: {
     appellantComment: string;
     appealDate: string;
@@ -79,6 +117,9 @@ export interface Match {
   round: number;
   tvChannel: string;
   refereeAppointed?: string;
+  serie: 'A' | 'B';
+  phase: string;
+  totalRoundsInPhase: number;
   logistics: {
     seguridadOk: boolean;
     ambulanciaOk: boolean;

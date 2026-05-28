@@ -15,6 +15,9 @@ function mapRowToMatch(row: any): Match {
     round: row.round,
     tvChannel: row.tv_channel,
     refereeAppointed: row.referee_appointed ?? undefined,
+    serie: row.serie ?? 'A',
+    phase: row.phase ?? 'Primera Etapa',
+    totalRoundsInPhase: row.total_rounds_in_phase ?? 22,
     logistics: {
       seguridadOk: row.seguridad_ok,
       ambulanciaOk: row.ambulancia_ok,
@@ -39,6 +42,9 @@ function mapMatchToRow(match: Omit<Match, 'id'> & { id?: string }) {
     round: match.round,
     tv_channel: match.tvChannel,
     referee_appointed: match.refereeAppointed ?? null,
+    serie: match.serie ?? 'A',
+    phase: match.phase ?? 'Primera Etapa',
+    total_rounds_in_phase: match.totalRoundsInPhase ?? 22,
     seguridad_ok: match.logistics.seguridadOk,
     ambulancia_ok: match.logistics.ambulanciaOk,
     transmision_tv_ok: match.logistics.transmisionTvOk,
@@ -93,4 +99,12 @@ export async function updateMatch(id: string, updates: Partial<Match>): Promise<
     .single();
   if (error) throw error;
   return mapRowToMatch(data);
+}
+
+export async function deleteMatch(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('matches')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
 }

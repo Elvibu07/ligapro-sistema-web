@@ -660,6 +660,9 @@ export const initialMatches: Match[] = [
     round: 12,
     tvChannel: "Zapping Sports",
     refereeAppointed: "Guillermo Guerrero",
+    serie: "A",
+    phase: "Primera Etapa",
+    totalRoundsInPhase: 22,
     logistics: {
       seguridadOk: true,
       ambulanciaOk: true,
@@ -679,6 +682,9 @@ export const initialMatches: Match[] = [
     round: 12,
     tvChannel: "Zapping Sports",
     refereeAppointed: "Augusto Aragón",
+    serie: "A",
+    phase: "Primera Etapa",
+    totalRoundsInPhase: 22,
     logistics: {
       seguridadOk: true,
       ambulanciaOk: true,
@@ -698,6 +704,9 @@ export const initialMatches: Match[] = [
     round: 12,
     tvChannel: "Zapping Sports",
     refereeAppointed: "Franklin Congo",
+    serie: "A",
+    phase: "Primera Etapa",
+    totalRoundsInPhase: 22,
     logistics: {
       seguridadOk: false,
       ambulanciaOk: true,
