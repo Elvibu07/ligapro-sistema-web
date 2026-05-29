@@ -49,7 +49,8 @@ export default function Header({ currentUser, onNavigate, onLogout }: HeaderProp
   }, [theme]);
 
   // Persist notifications in localStorage so they survive page reloads
-  const STORAGE_KEY = 'ligapro-notifications';
+  const STORAGE_KEY = `ligapro-notifications-${currentUser.role.replace(/[^a-zA-Z0-9]/g, '')}`;
+  
   const defaultNotifications = [
     { id: 1, text: "Barcelona S.C. apeló sanción de Adonis Preciado", read: false, type: "disciplina", view: "disciplina" },
     { id: 2, text: "Cámara 5 del Estadio Monumental reporta error de calibración", read: false, type: "var", view: "var-vor" },
@@ -57,14 +58,23 @@ export default function Header({ currentUser, onNavigate, onLogout }: HeaderProp
     { id: 4, text: "Sorteo Arbitral de la Jornada 12 completado exitosamente", read: true, type: "arbitraje", view: "arbitros" }
   ];
 
-  const [notifications, setNotifications] = useState<any[]>(() => {
+  const [notifications, setNotifications] = useState<any[]>([]);
+
+  // Reload cache when role changes
+  useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : defaultNotifications;
+      if (saved) {
+        setNotifications(JSON.parse(saved));
+      } else {
+        // Only admins get the demo default notifications
+        const initial = currentUser.role.includes("Fan") ? [] : defaultNotifications;
+        setNotifications(initial);
+      }
     } catch {
-      return defaultNotifications;
+      setNotifications([]);
     }
-  });
+  }, [STORAGE_KEY, currentUser.role]);
 
   // Load from Supabase on mount
   useEffect(() => {
@@ -258,6 +268,11 @@ export default function Header({ currentUser, onNavigate, onLogout }: HeaderProp
                       key={n.id} 
                       onClick={() => {
                         handleMarkAsRead(n.id);
+                        // Security Check: Block fans from navigating to admin modules
+                        if (currentUser.role.includes("Fan") && n.view !== "fans" && n.view !== "dashboard") {
+                          setShowNotifications(false);
+                          return;
+                        }
                         onNavigate(n.view);
                         setShowNotifications(false);
                       }}

@@ -188,6 +188,23 @@ export async function signUp(
   };
 }
 
+export async function signInWithOAuth(provider: 'google' | 'facebook'): Promise<{ error: string | null }> {
+  try {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+    if (error) {
+      return { error: error.message };
+    }
+    return { error: null };
+  } catch (err: any) {
+    return { error: 'Error de conexión con el proveedor. Verifique la configuración de Supabase.' };
+  }
+}
+
 export async function signOut(): Promise<void> {
   await supabase.auth.signOut();
 }

@@ -18,7 +18,8 @@ import {
   Target,
   Activity,
   X,
-  Gamepad2
+  Gamepad2,
+  CheckCircle2
 } from "lucide-react";
 import type { Club, Player, Match, Stadium } from "../types";
 import type { AuthUser } from "../lib/services/auth";
@@ -192,6 +193,8 @@ export default function FanView({ clubs, players, matches, stadiums, user }: Fan
     ? players.filter((p) => p.clubId === selectedClubId)
     : players;
 
+  const activeLiveMatch = matches.find(m => m.status === "En Juego");
+
   const topScorer = [...players].sort((a, b) => b.goals - a.goals)[0];
   const topAssists = [...players].sort((a, b) => b.matchesPlayed - a.matchesPlayed)[0];
 
@@ -203,7 +206,7 @@ export default function FanView({ clubs, players, matches, stadiums, user }: Fan
     { id: "posiciones", label: "Tabla", icon: Trophy },
     { id: "fixture", label: "Partidos", icon: CalendarDays },
     { id: "jugadores", label: "Jugadores", icon: Users },
-    { id: "predicciones", label: "Polla LigaPro", icon: Gamepad2 },
+    { id: "predicciones", label: "Pronósticos", icon: Gamepad2 },
   ] as const;
 
   return (
@@ -273,44 +276,54 @@ export default function FanView({ clubs, players, matches, stadiums, user }: Fan
       {/* ═══════════════════════ INICIO ════════════════════════════ */}
       {activeTab === "inicio" && (
         <div className="space-y-6">
-          {/* Mi equipo favorito */}
-          <div>
-            <h2 className="text-xs font-mono uppercase text-slate-500 tracking-widest mb-3 flex items-center gap-2">
-              <Heart size={12} className="text-rose-400" /> Elige tu equipo favorito
-            </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {clubs.map((club) => {
-                const color = CLUB_COLORS[club.id];
-                const isFav = favoriteClub === club.id;
-                return (
-                  <button
-                    key={club.id}
-                    onClick={() => setFavoriteClub(isFav ? null : club.id)}
-                    className={`relative group p-4 rounded-xl border transition-all text-left ${
-                      isFav
-                        ? "border-[#CCFF00]/60 bg-[#CCFF00]/10 shadow-lg shadow-[#CCFF00]/10"
-                        : "border-slate-700/50 bg-slate-900/40 hover:border-slate-600 hover:bg-slate-800/40"
-                    }`}
-                  >
-                    {isFav && (
-                      <span className="absolute top-2 right-2 text-[#CCFF00]">
-                        <Heart size={12} fill="currentColor" />
-                      </span>
-                    )}
-                    <ClubBadge club={club} size={40} />
-                    <p className="text-white font-bold text-xs mt-2 leading-tight">{club.shortName}</p>
-                    <p className="text-slate-500 text-[10px]">{club.city}</p>
-                    <div className={`mt-2 w-full h-0.5 rounded-full bg-gradient-to-r`}
-                      style={{ background: color ? `linear-gradient(to right, ${color.primary}, transparent)` : "#CCFF00" }}
-                    />
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
           {/* Destacados */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            
+            {/* Partido en Vivo */}
+            {activeLiveMatch && (() => {
+              const home = getClub(activeLiveMatch.homeTeamId);
+              const away = getClub(activeLiveMatch.awayTeamId);
+              const stadium = getStadium(activeLiveMatch.stadiumId);
+              return (
+                <div className="bg-gradient-to-br from-red-900/40 to-slate-900/80 border border-red-700/50 rounded-2xl p-5 relative overflow-hidden lg:col-span-1 sm:col-span-2">
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-red-500/10 rounded-full blur-3xl" />
+                  <div className="flex items-center justify-between mb-4 relative z-10">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-red-500 animate-ping" />
+                      <span className="text-[10px] font-mono uppercase text-red-400 font-bold tracking-wider border border-red-500/20 bg-red-500/10 px-2 py-0.5 rounded">
+                        Partido en Vivo
+                      </span>
+                    </div>
+                    <span className="text-xs font-mono text-slate-400">Fecha {activeLiveMatch.round}</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 items-center text-center relative z-10 mt-2">
+                    <div className="flex flex-col items-center">
+                      {home && <ClubBadge club={home} size={48} />}
+                      <span className="text-white font-bold text-sm mt-2 max-w-[100px] truncate">{home?.shortName}</span>
+                    </div>
+                    
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="bg-red-500 text-white font-black text-2xl px-4 py-1 rounded-lg border border-red-600 shadow-[0_0_15px_rgba(239,68,68,0.3)]">
+                        {activeLiveMatch.homeScore || 0} - {activeLiveMatch.awayScore || 0}
+                      </div>
+                      <span className="text-[10px] font-mono text-slate-400 mt-2">EN JUEGO</span>
+                    </div>
+                    
+                    <div className="flex flex-col items-center">
+                      {away && <ClubBadge club={away} size={48} />}
+                      <span className="text-white font-bold text-sm mt-2 max-w-[100px] truncate">{away?.shortName}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-5 pt-3 border-t border-slate-800/80 flex items-center justify-between text-[10px] font-mono text-slate-400 relative z-10">
+                    <span className="flex items-center gap-1 truncate max-w-[120px]"><MapPin size={10} className="shrink-0" /> {stadium?.name}</span>
+                    <span className="text-emerald-400 flex items-center gap-1 shrink-0"><CheckCircle2 size={10} /> Marcador Oficial</span>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Top Goleador */}
             {topScorer && (
               <div
@@ -406,6 +419,43 @@ export default function FanView({ clubs, players, matches, stadiums, user }: Fan
               Ver tabla completa <ChevronRight size={12} />
             </button>
           </div>
+
+          {/* Mi equipo favorito */}
+          <div>
+            <h2 className="text-xs font-mono uppercase text-slate-500 tracking-widest mb-3 flex items-center gap-2 mt-2">
+              <Heart size={12} className="text-rose-400" /> Elige tu equipo favorito
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {clubs.map((club) => {
+                const color = CLUB_COLORS[club.id];
+                const isFav = favoriteClub === club.id;
+                return (
+                  <button
+                    key={club.id}
+                    onClick={() => setFavoriteClub(isFav ? null : club.id)}
+                    className={`relative group p-4 rounded-xl border transition-all text-left ${
+                      isFav
+                        ? "border-[#CCFF00]/60 bg-[#CCFF00]/10 shadow-lg shadow-[#CCFF00]/10"
+                        : "border-slate-700/50 bg-slate-900/40 hover:border-slate-600 hover:bg-slate-800/40"
+                    }`}
+                  >
+                    {isFav && (
+                      <span className="absolute top-2 right-2 text-[#CCFF00]">
+                        <Heart size={12} fill="currentColor" />
+                      </span>
+                    )}
+                    <ClubBadge club={club} size={40} />
+                    <p className="text-white font-bold text-xs mt-2 leading-tight">{club.shortName}</p>
+                    <p className="text-slate-500 text-[10px]">{club.city}</p>
+                    <div className={`mt-2 w-full h-0.5 rounded-full bg-gradient-to-r`}
+                      style={{ background: color ? `linear-gradient(to right, ${color.primary}, transparent)` : "#CCFF00" }}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
         </div>
       )}
 
