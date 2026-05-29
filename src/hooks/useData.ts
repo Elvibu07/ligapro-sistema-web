@@ -3,7 +3,7 @@ import { getClubs, createClub, updateClub, deleteClub } from '../lib/services/cl
 import { getPlayers, createPlayer, updatePlayer, deletePlayer } from '../lib/services/players';
 import { getMatches, createMatch, updateMatch, deleteMatch } from '../lib/services/matches';
 import { getSanctions, createSanction, updateSanction } from '../lib/services/sanctions';
-import { getStadiums, createStadium, updateStadium } from '../lib/services/stadiums';
+import { getStadiums, createStadium, updateStadium, deleteStadium } from '../lib/services/stadiums';
 import { getPostponements, createPostponement, updatePostponement } from '../lib/services/postponements';
 import type { Club, Player, Match, Sanction, Stadium, PostponementRequest } from '../types';
 import { initialClubs } from '../mockData';
@@ -424,7 +424,25 @@ export function useStadiums(fallback: Stadium[]) {
     }
   }, []);
 
-  return { stadiums, setStadiums, loading, error, add, update, reload: load };
+  const remove = useCallback(async (id: string) => {
+    let stadiumName = '';
+    setStadiums(prev => {
+      const found = prev.find(s => s.id === id);
+      if (found) stadiumName = found.name;
+      return prev;
+    });
+    try {
+      await deleteStadium(id);
+      dispatchNotification(`Estadio "${stadiumName || id}" eliminado del sistema`, 'estadios', 'estadios');
+      setStadiums(prev => prev.filter(s => s.id !== id));
+    } catch (e: any) {
+      console.warn('Supabase delete stadium error, using local fallback:', e.message);
+      setStadiums(prev => prev.filter(s => s.id !== id));
+      dispatchNotification(`Estadio "${stadiumName || id}" eliminado (Local)`, 'estadios', 'estadios');
+    }
+  }, []);
+
+  return { stadiums, setStadiums, loading, error, add, update, remove, reload: load };
 }
 
 // ─── usePostponements ────────────────────────────────────────────────────────

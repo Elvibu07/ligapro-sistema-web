@@ -14,6 +14,8 @@ function mapRowToStadium(row: any): Stadium {
     locationCoords: { lat: row.lat, lng: row.lng },
     varCertified: row.var_certified,
     lastInspectionDate: row.last_inspection_date,
+    grassHeight: row.grass_height,
+    fifaQualityPro: row.fifa_quality_pro,
   };
 }
 
@@ -41,6 +43,8 @@ export async function createStadium(stadium: Omit<Stadium, 'id'>): Promise<Stadi
     lng: stadium.locationCoords.lng,
     var_certified: stadium.varCertified,
     last_inspection_date: stadium.lastInspectionDate,
+    grass_height: stadium.grassHeight,
+    fifa_quality_pro: stadium.fifaQualityPro,
   };
 
   const { data, error } = await supabase
@@ -62,6 +66,8 @@ export async function updateStadium(id: string, updates: Partial<Stadium>): Prom
   if (updates.vorConnectivity !== undefined) row.vor_connectivity = updates.vorConnectivity;
   if (updates.varCertified !== undefined) row.var_certified = updates.varCertified;
   if (updates.lastInspectionDate !== undefined) row.last_inspection_date = updates.lastInspectionDate;
+  if (updates.grassHeight !== undefined) row.grass_height = updates.grassHeight;
+  if (updates.fifaQualityPro !== undefined) row.fifa_quality_pro = updates.fifaQualityPro;
   if (updates.locationCoords) {
     row.lat = updates.locationCoords.lat;
     row.lng = updates.locationCoords.lng;
@@ -75,4 +81,12 @@ export async function updateStadium(id: string, updates: Partial<Stadium>): Prom
     .single();
   if (error) throw error;
   return mapRowToStadium(data);
+}
+
+export async function deleteStadium(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('stadiums')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
 }

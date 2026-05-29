@@ -54,6 +54,30 @@ export function validateMaximumStaff(staffCount: number): ValidationResult {
 }
 
 /**
+ * VALIDACIÓN 3.3b — Staff Obligatorio (Art. 45 y 63)
+ * Se requiere obligatoriamente un Médico y un Director Técnico.
+ */
+export function validateMandatoryStaff(staffList: any[]): ValidationResult {
+  const hasMedico = staffList.some(s => s.role === 'Médico');
+  const hasDT = staffList.some(s => s.role === 'Director Técnico');
+  
+  if (!hasMedico || !hasDT) {
+    const missing = [];
+    if (!hasMedico) missing.push('Médico');
+    if (!hasDT) missing.push('Director Técnico');
+    
+    return {
+      valid: false,
+      ruleCode: '3.3b',
+      article: 'Art. 45',
+      message: `La planilla de juego no puede ser aprobada sin el personal técnico obligatorio. Falta registrar: ${missing.join(' y ')}.`,
+      details: { hasMedico, hasDT },
+    };
+  }
+  return { valid: true, message: 'Personal técnico obligatorio presente.', ruleCode: '3.3b', article: 'Art. 45' };
+}
+
+/**
  * VALIDACIÓN 3.4 — Entrega con 70 minutos de anticipación (Art. 45)
  * La planilla debe entregarse al menos 70 minutos antes del inicio del partido.
  */

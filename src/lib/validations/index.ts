@@ -12,6 +12,7 @@ export {
   validateClubHasDT,
   validateClubEconomicApproval,
   validateClubNoActiveSanction,
+  validateClubMinPlayers,
   validateClubHomeStadium,
 } from './clubValidations';
 
@@ -29,6 +30,7 @@ export {
   validateMinimumPlayers,
   validateMaximumPlayers,
   validateMaximumStaff,
+  validateMandatoryStaff,
   validateSheetDeliveryTime,
   validateDTSignature,
   validateSubstitutionLimit,

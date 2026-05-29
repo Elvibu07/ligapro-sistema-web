@@ -14,6 +14,7 @@ import {
   validateSubstitutionLimit,
   validateSubstitutionMoments,
   validatePlayerNotSubstituted,
+  validateMandatoryStaff
 } from "../lib/validations";
 import { logValidationBlock } from "../lib/services/auditLog";
 import type { ValidationResult } from "../lib/validations/types";
@@ -63,6 +64,19 @@ const MOCK_CLUB_STAFF: Record<string, ClubStaff[]> = {
   "ldu-quito": [
     { id: "staff-3", clubId: "ldu-quito", name: "Dr. Luis Ramírez", role: "Médico", status: "Activo" },
     { id: "staff-4", clubId: "ldu-quito", name: "Pablo Marini", role: "Director Técnico", status: "Activo" },
+  ],
+  "ind-valle": [
+    { id: "staff-5", clubId: "ind-valle", name: "Dr. Felipe Suárez", role: "Médico", status: "Activo" },
+    { id: "staff-6", clubId: "ind-valle", name: "Martín Anselmi", role: "Director Técnico", status: "Activo" },
+  ],
+  "emelec": [
+    { id: "staff-7", clubId: "emelec", name: "Dr. Jorge Meza", role: "Médico", status: "Activo" },
+  ],
+  "el-nacional": [
+  ],
+  "aucas": [
+    { id: "staff-10", clubId: "aucas", name: "Dr. Carlos Villacís", role: "Médico", status: "Activo" },
+    { id: "staff-11", clubId: "aucas", name: "Armando Osma", role: "Director Técnico", status: "Activo" },
   ],
 };
 
@@ -237,6 +251,14 @@ export default function MatchSheetsView({ matches, clubs, players, currentUserEm
         logValidationBlock('3.4', 'Planillas', currentUserEmail, timeVal.message, timeVal.details);
         return; // This could be a soft warning depending on strictness, but we block here as per rules
       }
+    }
+
+    // VALIDACIÓN 3.3b — Staff Obligatorio (Art. 45 y 63)
+    const staffVal = validateMandatoryStaff(staffList);
+    if (!staffVal.valid) {
+      setValidationError(staffVal);
+      logValidationBlock('3.3b', 'Planillas', currentUserEmail, staffVal.message, staffVal.details);
+      return;
     }
 
     // VALIDACIÓN 3.5 — Firma DT
@@ -419,7 +441,17 @@ export default function MatchSheetsView({ matches, clubs, players, currentUserEm
               <label className="block text-slate-500 font-mono text-[9px] uppercase mb-1">Paso 1: Seleccione el Partido Oficial</label>
               <select
                 value={selectedMatchId}
-                onChange={(e) => setSelectedMatchId(e.target.value)}
+                onChange={(e) => {
+                  const newMatchId = e.target.value;
+                  setSelectedMatchId(newMatchId);
+                  const newMatch = matches.find(m => m.id === newMatchId);
+                  if (newMatch) {
+                    setSelectedClubId(newMatch.homeTeamId);
+                  }
+                  setStarters([]);
+                  setBenched([]);
+                  setStaffList([]);
+                }}
                 className="w-full bg-slate-900 border border-slate-800 p-2 text-xs text-white rounded focus:none"
               >
                 {matches.map(m => (
@@ -441,15 +473,27 @@ export default function MatchSheetsView({ matches, clubs, players, currentUserEm
                 }}
                 className="w-full bg-slate-900 border border-slate-800 p-2 text-xs text-white rounded focus:none"
               >
-                <option value="barcelona-sc">Barcelona Sporting Club</option>
-                <option value="ldu-quito">Liga Deportiva Universitaria</option>
-                <option value="ind-valle">Independiente del Valle</option>
-                <option value="emelec">Club Sport Emelec</option>
+                {activeMatch && (
+                  <>
+                    <option value={activeMatch.homeTeamId}>{getClubShortName(activeMatch.homeTeamId)} (Local)</option>
+                    <option value={activeMatch.awayTeamId}>{getClubShortName(activeMatch.awayTeamId)} (Visitante)</option>
+                  </>
+                )}
               </select>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 items-start">
+          {activeClub?.economicApproved === false ? (
+            <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-12 text-center mt-6">
+              <ShieldAlert className="mx-auto text-red-500 mb-4 animate-pulse" size={48} />
+              <h2 className="text-xl font-bold text-white mb-2 uppercase tracking-wide">Bloqueo por Control Económico</h2>
+              <p className="text-slate-400 text-xs max-w-md mx-auto leading-relaxed">
+                El club {activeClub.name} no cuenta con la aprobación de Control Económico vigente de la LigaPro. <br/><br/>
+                El sistema COMET <strong>bloquea automáticamente la generación de planillas</strong> y la convocatoria de nóminas para este club hasta que regularice su estado financiero.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 items-start">
             
             {/* COLUMN 1: AVAILABLE ROSTER */}
             <div className="bg-slate-950 border border-slate-850 rounded-2xl p-4 text-left xl:col-span-1">
@@ -591,6 +635,7 @@ export default function MatchSheetsView({ matches, clubs, players, currentUserEm
 
             </div>
           </div>
+          )}
         </div>
       )}
 

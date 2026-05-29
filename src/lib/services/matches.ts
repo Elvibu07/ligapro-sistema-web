@@ -24,6 +24,8 @@ function mapRowToMatch(row: any): Match {
       transmisionTvOk: row.transmision_tv_ok,
       certificacionVarOk: row.certificacion_var_ok,
       balonerosOk: row.baloneros_ok,
+      pasabolasCount: row.pasabolas_count ?? 8,
+      pasabolasAgesOk: row.pasabolas_ages_ok ?? false,
     },
   };
 }
@@ -50,6 +52,8 @@ function mapMatchToRow(match: Omit<Match, 'id'> & { id?: string }) {
     transmision_tv_ok: match.logistics.transmisionTvOk,
     certificacion_var_ok: match.logistics.certificacionVarOk,
     baloneros_ok: match.logistics.balonerosOk,
+    pasabolas_count: match.logistics.pasabolasCount ?? 8,
+    pasabolas_ages_ok: match.logistics.pasabolasAgesOk ?? false,
   };
 }
 

@@ -27,6 +27,7 @@ import {
   validateClubHasDT,
   validateClubEconomicApproval,
   validateClubNoActiveSanction,
+  validateClubMinPlayers,
 } from "../lib/validations";
 import { logValidationBlock } from "../lib/services/auditLog";
 import type { ValidationResult } from "../lib/validations/types";
@@ -38,11 +39,12 @@ interface ClubsViewProps {
   onUpdateClub?: (id: string, updates: Partial<Club>) => Promise<Club>;
   onDeleteClub?: (id: string) => Promise<void>;
   sanctions?: Sanction[];
+  players?: any[];
   currentUserEmail?: string;
 }
 
 // ─── Mock data for club staff & economic approvals (simulated until Supabase table is seeded) ─
-const MOCK_CLUB_STAFF: Record<string, ClubStaff[]> = {
+const INITIAL_CLUB_STAFF: Record<string, ClubStaff[]> = {
   "barcelona-sc": [
     { id: "staff-1", clubId: "barcelona-sc", name: "Dr. Roberto Medina", role: "Médico", status: "Activo" },
     { id: "staff-2", clubId: "barcelona-sc", name: "Segundo Alejandro Castillo", role: "Director Técnico", status: "Activo" },
@@ -68,7 +70,7 @@ const MOCK_CLUB_STAFF: Record<string, ClubStaff[]> = {
   ],
 };
 
-const MOCK_ECONOMIC_APPROVALS: Record<string, ClubEconomicApproval> = {
+const INITIAL_ECONOMIC_APPROVALS: Record<string, ClubEconomicApproval> = {
   "barcelona-sc": { id: "eco-1", clubId: "barcelona-sc", approved: true, approvedBy: "Dir. Control Económico", approvedDate: "2026-01-15", season: "2026" },
   "ldu-quito": { id: "eco-2", clubId: "ldu-quito", approved: true, approvedBy: "Dir. Control Económico", approvedDate: "2026-01-20", season: "2026" },
   "ind-valle": { id: "eco-3", clubId: "ind-valle", approved: true, approvedBy: "Dir. Control Económico", approvedDate: "2026-02-01", season: "2026" },
@@ -77,11 +79,15 @@ const MOCK_ECONOMIC_APPROVALS: Record<string, ClubEconomicApproval> = {
   "aucas": { id: "eco-6", clubId: "aucas", approved: true, approvedBy: "Dir. Control Económico", approvedDate: "2026-01-25", season: "2026" },
 };
 
-export default function ClubsView({ clubs, onClubsChange, onAddClub, onUpdateClub, onDeleteClub, sanctions = [], currentUserEmail = "admin@ligapro.ec" }: ClubsViewProps) {
+export default function ClubsView({ clubs, onClubsChange, onAddClub, onUpdateClub, onDeleteClub, sanctions = [], players = [], currentUserEmail = "admin@ligapro.ec" }: ClubsViewProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("Todos");
   const [showAddDrawer, setShowAddDrawer] = useState(false);
   const [auditedClub, setAuditedClub] = useState<Club | null>(null);
+
+  // Local state to simulate staff and economic additions
+  const [localStaff, setLocalStaff] = useState<Record<string, ClubStaff[]>>(INITIAL_CLUB_STAFF);
+  const [localEconomy, setLocalEconomy] = useState<Record<string, ClubEconomicApproval>>(INITIAL_ECONOMIC_APPROVALS);
 
   // ─── Validation modal state ────────────────────────────────────────────────
   const [validationError, setValidationError] = useState<ValidationResult | null>(null);
@@ -160,6 +166,35 @@ export default function ClubsView({ clubs, onClubsChange, onAddClub, onUpdateClu
     }
   };
 
+  const handleAddStaff = (clubId: string, role: 'Médico' | 'Director Técnico') => {
+    const name = window.prompt(`Ingrese el nombre completo del ${role}:`);
+    if (name && name.trim().length > 0) {
+      setLocalStaff(prev => ({
+        ...prev,
+        [clubId]: [
+          ...(prev[clubId] || []).filter(s => s.role !== role),
+          { id: `staff-${Date.now()}`, clubId, name: name.trim(), role, status: 'Activo' }
+        ]
+      }));
+    }
+  };
+
+  const handleApproveEconomy = (clubId: string) => {
+    if (window.confirm('¿Confirma la validación y aprobación del control económico para este club?')) {
+      setLocalEconomy(prev => ({
+        ...prev,
+        [clubId]: {
+          id: `eco-${Date.now()}`,
+          clubId,
+          approved: true,
+          approvedBy: currentUserEmail || 'Admin',
+          approvedDate: new Date().toISOString().split('T')[0],
+          season: '2026'
+        }
+      }));
+    }
+  };
+
   // Counts
   const totalCount = clubs.length;
   const enabledCount = clubs.filter(c => c.status === "Habilitado").length;
@@ -171,8 +206,8 @@ export default function ClubsView({ clubs, onClubsChange, onAddClub, onUpdateClu
    * Se ejecutan antes de cambiar el estado a "Habilitado".
    */
   const runClubEnableValidations = (clubId: string, clubName: string): boolean => {
-    const staff = MOCK_CLUB_STAFF[clubId] || [];
-    const economicApproval = MOCK_ECONOMIC_APPROVALS[clubId] || null;
+    const staff = localStaff[clubId] || [];
+    const economicApproval = localEconomy[clubId] || null;
 
     // 1.1 — Médico obligatorio
     const medicoResult = validateClubHasMedico(staff);
@@ -203,6 +238,14 @@ export default function ClubsView({ clubs, onClubsChange, onAddClub, onUpdateClu
     if (!sanctionResult.valid) {
       setValidationError(sanctionResult);
       logValidationBlock('1.4', 'Clubes', currentUserEmail, sanctionResult.message, { clubId, clubName });
+      return false;
+    }
+
+    // 1.6 — Mínimo de 7 jugadores
+    const minPlayersResult = validateClubMinPlayers(clubId, players);
+    if (!minPlayersResult.valid) {
+      setValidationError(minPlayersResult);
+      logValidationBlock('1.6', 'Clubes', currentUserEmail, minPlayersResult.message, { clubId, clubName });
       return false;
     }
 
@@ -380,8 +423,8 @@ export default function ClubsView({ clubs, onClubsChange, onAddClub, onUpdateClu
   });
 
   // Helper to get staff info for a club
-  const getClubStaff = (clubId: string) => MOCK_CLUB_STAFF[clubId] || [];
-  const getClubEconomicApproval = (clubId: string) => MOCK_ECONOMIC_APPROVALS[clubId] || null;
+  const getClubStaff = (clubId: string) => localStaff[clubId] || [];
+  const getClubEconomicApproval = (clubId: string) => localEconomy[clubId] || null;
 
   return (
     <div className="space-y-6">
@@ -935,8 +978,8 @@ export default function ClubsView({ clubs, onClubsChange, onAddClub, onUpdateClu
                   </span>
                   
                   {(() => {
-                    const staff = getClubStaff(auditedClub.id);
-                    const eco = getClubEconomicApproval(auditedClub.id);
+                    const staff = localStaff[auditedClub.id] || [];
+                    const eco = localEconomy[auditedClub.id] || null;
                     const hasMed = staff.some(s => s.role === 'Médico' && s.status === 'Activo');
                     const hasDt = staff.some(s => s.role === 'Director Técnico' && s.status === 'Activo');
                     const dtName = staff.find(s => s.role === 'Director Técnico')?.name || 'No registrado';
@@ -952,9 +995,13 @@ export default function ClubsView({ clubs, onClubsChange, onAddClub, onUpdateClu
                               <span className="text-[10px] text-slate-500">{medName}</span>
                             </div>
                           </div>
-                          <span className={`text-[9px] font-mono font-bold ${hasMed ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {hasMed ? 'REGISTRADO ✓' : 'FALTA ✗'}
-                          </span>
+                          {!hasMed ? (
+                            <button onClick={() => handleAddStaff(auditedClub.id, 'Médico')} className="text-[9px] font-mono font-bold px-2 py-1 bg-blue-500/20 text-blue-400 hover:bg-blue-500/40 rounded transition">
+                              REGISTRAR
+                            </button>
+                          ) : (
+                            <span className="text-[9px] font-mono font-bold text-emerald-400">REGISTRADO ✓</span>
+                          )}
                         </div>
                         
                         <div className={`flex items-center justify-between p-2.5 rounded-lg border ${hasDt ? 'bg-emerald-500/5 border-emerald-500/15' : 'bg-red-500/5 border-red-500/15'}`}>
@@ -965,9 +1012,13 @@ export default function ClubsView({ clubs, onClubsChange, onAddClub, onUpdateClu
                               <span className="text-[10px] text-slate-500">{dtName}</span>
                             </div>
                           </div>
-                          <span className={`text-[9px] font-mono font-bold ${hasDt ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {hasDt ? 'REGISTRADO ✓' : 'FALTA ✗'}
-                          </span>
+                          {!hasDt ? (
+                            <button onClick={() => handleAddStaff(auditedClub.id, 'Director Técnico')} className="text-[9px] font-mono font-bold px-2 py-1 bg-blue-500/20 text-blue-400 hover:bg-blue-500/40 rounded transition">
+                              REGISTRAR
+                            </button>
+                          ) : (
+                            <span className="text-[9px] font-mono font-bold text-emerald-400">REGISTRADO ✓</span>
+                          )}
                         </div>
                         
                         <div className={`flex items-center justify-between p-2.5 rounded-lg border ${eco?.approved ? 'bg-emerald-500/5 border-emerald-500/15' : 'bg-red-500/5 border-red-500/15'}`}>
@@ -978,9 +1029,13 @@ export default function ClubsView({ clubs, onClubsChange, onAddClub, onUpdateClu
                               <span className="text-[10px] text-slate-500">{eco?.approved ? `Aprobado: ${eco.approvedDate}` : 'Sin aprobación'}</span>
                             </div>
                           </div>
-                          <span className={`text-[9px] font-mono font-bold ${eco?.approved ? 'text-emerald-400' : 'text-red-400'}`}>
-                            {eco?.approved ? 'APROBADO ✓' : 'PENDIENTE ✗'}
-                          </span>
+                          {!eco?.approved ? (
+                            <button onClick={() => handleApproveEconomy(auditedClub.id)} className="text-[9px] font-mono font-bold px-2 py-1 bg-blue-500/20 text-blue-400 hover:bg-blue-500/40 rounded transition">
+                              APROBAR
+                            </button>
+                          ) : (
+                            <span className="text-[9px] font-mono font-bold text-emerald-400">APROBADO ✓</span>
+                          )}
                         </div>
                       </div>
                     );

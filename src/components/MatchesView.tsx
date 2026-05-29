@@ -26,6 +26,7 @@ import {
   validateUnifiedSchedule,
   validateClubNoActiveSanction,
   validateClubHomeStadium,
+  validateClubMinPlayers,
   FIFA_DATES_2026,
 } from "../lib/validations";
 import { logValidationBlock } from "../lib/services/auditLog";
@@ -40,10 +41,11 @@ interface MatchesViewProps {
   onUpdateMatch?: (id: string, updates: Partial<Match>) => Promise<Match>;
   onDeleteMatch?: (id: string) => Promise<void>;
   sanctions?: Sanction[];
+  players?: any[];
   currentUserEmail?: string;
 }
 
-export default function MatchesView({ matches, clubs, stadiums, onMatchesChange, onAddMatch, onUpdateMatch, onDeleteMatch, sanctions = [], currentUserEmail = "admin@ligapro.ec" }: MatchesViewProps) {
+export default function MatchesView({ matches, clubs, stadiums, onMatchesChange, onAddMatch, onUpdateMatch, onDeleteMatch, sanctions = [], players = [], currentUserEmail = "admin@ligapro.ec" }: MatchesViewProps) {
   const [showAddMatchForm, setShowAddMatchForm] = useState(false);
   const [activeTab, setActiveTab] = useState<"lista" | "mapa">("lista");
   const [editingMatchResult, setEditingMatchResult] = useState<Match | null>(null);
@@ -60,6 +62,8 @@ export default function MatchesView({ matches, clubs, stadiums, onMatchesChange,
   const [newTime, setNewTime] = useState("18:00");
   const [newChannel, setNewChannel] = useState("Zapping Sports");
   const [newSerie, setNewSerie] = useState<'A' | 'B'>('A');
+  const [newPasabolasCount, setNewPasabolasCount] = useState(8);
+  const [newPasabolasAgesOk, setNewPasabolasAgesOk] = useState(true);
 
   const openEditForm = (m: Match) => {
     setEditingMatchId(m.id);
@@ -82,6 +86,8 @@ export default function MatchesView({ matches, clubs, stadiums, onMatchesChange,
     setNewTime("18:00");
     setNewChannel("Zapping Sports");
     setNewSerie('A');
+    setNewPasabolasCount(8);
+    setNewPasabolasAgesOk(true);
     setShowAddMatchForm(true);
   };
 
@@ -126,6 +132,16 @@ export default function MatchesView({ matches, clubs, stadiums, onMatchesChange,
     e.preventDefault();
     if (newHome === newAway) {
       alert("Un equipo no puede jugar contra sí mismo.");
+      return;
+    }
+    
+    // ─── VALIDACIÓN LOGÍSTICA — Pasabolas (Art. 54) ─────────────────────────
+    if (newPasabolasCount !== 8 && newPasabolasCount !== 12) {
+      alert("Según el Art. 54, la cantidad de pasabolas debe ser obligatoriamente 8 o 12.");
+      return;
+    }
+    if (!newPasabolasAgesOk) {
+      alert("Según el Art. 54, los pasabolas deben tener obligatoriamente entre 14 y 17 años de edad.");
       return;
     }
 
@@ -207,6 +223,24 @@ export default function MatchesView({ matches, clubs, stadiums, onMatchesChange,
       }
     }
 
+    // ─── VALIDACIÓN 1.6 — Mínimo de 7 jugadores ─────────────────────────────
+    if (homeClub) {
+      const homeMinPlayersResult = validateClubMinPlayers(homeClub.id, players);
+      if (!homeMinPlayersResult.valid) {
+        setValidationError(homeMinPlayersResult);
+        logValidationBlock('1.6', 'Programación', currentUserEmail, homeMinPlayersResult.message, { club: homeClub.shortName });
+        return;
+      }
+    }
+    if (awayClub) {
+      const awayMinPlayersResult = validateClubMinPlayers(awayClub.id, players);
+      if (!awayMinPlayersResult.valid) {
+        setValidationError(awayMinPlayersResult);
+        logValidationBlock('1.6', 'Programación', currentUserEmail, awayMinPlayersResult.message, { club: awayClub.shortName });
+        return;
+      }
+    }
+
     // ─── VALIDACIÓN 1.5 — Cesión de localía ─────────────────────────────────
     if (homeClub) {
       const selectedStadium = stadiums.find(s => s.id === newStadium);
@@ -238,7 +272,9 @@ export default function MatchesView({ matches, clubs, stadiums, onMatchesChange,
         ambulanciaOk: false,
         transmisionTvOk: false,
         certificacionVarOk: false,
-        balonerosOk: false
+        balonerosOk: false,
+        pasabolasCount: newPasabolasCount,
+        pasabolasAgesOk: newPasabolasAgesOk,
       }
     };
 
@@ -605,6 +641,38 @@ export default function MatchesView({ matches, clubs, stadiums, onMatchesChange,
                     className="w-full bg-slate-900 border border-slate-850 p-2 text-white rounded focus:outline-none"
                     required
                   />
+                </div>
+              </div>
+
+              {/* Logistics: Pasabolas (Art. 54) */}
+              <div className="bg-slate-900 border border-slate-850 p-3 rounded-lg space-y-3">
+                <span className="text-[10px] font-mono uppercase text-[#CCFF00] font-bold block">Logística de Pasabolas (Art. 54)</span>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-slate-400 font-medium mb-1">Cantidad *</label>
+                    <select 
+                      value={newPasabolasCount}
+                      onChange={(e) => setNewPasabolasCount(Number(e.target.value))}
+                      className="w-full bg-slate-950 border border-slate-850 p-2 text-white rounded focus:outline-none"
+                    >
+                      <option value={8}>8 Pasabolas</option>
+                      <option value={12}>12 Pasabolas</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center mt-6">
+                    <label className="flex items-center cursor-pointer group">
+                      <input 
+                        type="checkbox"
+                        checked={newPasabolasAgesOk}
+                        onChange={(e) => setNewPasabolasAgesOk(e.target.checked)}
+                        className="sr-only"
+                      />
+                      <div className={`w-4 h-4 rounded border flex items-center justify-center mr-2 ${newPasabolasAgesOk ? 'bg-[#CCFF00] border-[#CCFF00]' : 'border-slate-600 bg-slate-950 group-hover:border-slate-500'}`}>
+                        {newPasabolasAgesOk && <CheckCircle2 size={12} className="text-slate-950" />}
+                      </div>
+                      <span className="text-[10px] font-medium text-slate-300">Rango de Edad Validado (14-17 años)</span>
+                    </label>
+                  </div>
                 </div>
               </div>
 

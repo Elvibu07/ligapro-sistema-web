@@ -141,7 +141,25 @@ export default function DashboardView({ clubs, players, matches, stadiums, onNav
   ];
 
   const getClubName = (id: string) => clubs.find(c => c.id === id)?.name || "Club";
+  const getClubShortName = (id: string) => clubs.find(c => c.id === id)?.shortName || "Club";
+  const getClubLogo = (id: string) => clubs.find(c => c.id === id)?.logo || "CLB";
   const getStadiumName = (id: string) => stadiums.find(s => s.id === id)?.name || "Estadio";
+
+  const activeLiveMatch = matches.find(m => m.status === "En Juego");
+
+  // Observer to push logs when the live match score changes
+  useEffect(() => {
+    if (activeLiveMatch) {
+      const homeScore = activeLiveMatch.homeScore || 0;
+      const awayScore = activeLiveMatch.awayScore || 0;
+      
+      setSimLog(prev => {
+        const msg = `[EN VIVO] Transmisión Oficial: Marcador actualizado a ${homeScore} - ${awayScore}`;
+        if (prev.length > 0 && prev[prev.length - 1] === msg) return prev;
+        return [...prev, msg];
+      });
+    }
+  }, [activeLiveMatch?.homeScore, activeLiveMatch?.awayScore, activeLiveMatch?.id]);
 
   const dynamicPlanillas = matches
     .filter(m => m.status === "Finalizado" && m.homeScore !== undefined && m.awayScore !== undefined)
@@ -252,15 +270,15 @@ export default function DashboardView({ clubs, players, matches, stadiums, onNav
         <div className="xl:col-span-2 bg-gradient-to-br from-slate-950 to-slate-900 border border-slate-850 rounded-2xl p-5 text-white flex flex-col justify-between">
           
           <div>
-            <div className="flex items-center justify-between border-b border-slate-800pb-3">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center space-x-2">
-                <span className="h-2 w-2 bg-emerald-500 rounded-full animate-ping"></span>
-                <span className="text-[9px] font-mono uppercase bg-slate-900 px-2.5 py-1 text-slate-300 font-bold border border-slate-850 rounded">
-                  PRÓXIMO PARTIDO CLAVE
+                <span className={`h-2 w-2 rounded-full animate-ping ${activeLiveMatch ? "bg-red-500" : "bg-emerald-500"}`}></span>
+                <span className={`text-[9px] font-mono uppercase px-2.5 py-1 font-bold border rounded ${activeLiveMatch ? "bg-red-500/10 text-red-400 border-red-500/20" : "bg-slate-900 text-slate-300 border-slate-850"}`}>
+                  {activeLiveMatch ? "PARTIDO EN VIVO (EN JUEGO)" : "PRÓXIMO PARTIDO CLAVE"}
                 </span>
               </div>
               <span className="text-xs font-mono text-slate-400 flex items-center gap-1">
-                <Clock size={12} /> FECHA 12 • SERIE A
+                <Clock size={12} /> {activeLiveMatch ? `FECHA ${activeLiveMatch.round}` : "FECHA 12"} • SERIE A
               </span>
             </div>
 
@@ -268,26 +286,38 @@ export default function DashboardView({ clubs, players, matches, stadiums, onNav
             <div className="grid grid-cols-3 items-center text-center my-6">
               <div className="flex flex-col items-center">
                 <div className="w-14 h-14 rounded-full bg-slate-900 text-[#CCFF00] font-black flex items-center justify-center text-xl border border-slate-700 shadow-md">
-                  BSC
+                  {activeLiveMatch ? getClubLogo(activeLiveMatch.homeTeamId) : "BSC"}
                 </div>
-                <span className="text-slate-100 text-sm font-extrabold max-w-[120px] truncate mt-2">Barcelona S.C.</span>
+                <span className="text-slate-100 text-sm font-extrabold max-w-[120px] truncate mt-2">
+                  {activeLiveMatch ? getClubName(activeLiveMatch.homeTeamId) : "Barcelona S.C."}
+                </span>
                 <span className="text-[10px] text-slate-400 font-mono">Local</span>
               </div>
 
               <div className="flex flex-col items-center">
                 <span className="text-slate-500 text-xs font-mono block">VS</span>
-                <div className="bg-slate-900 border border-slate-800 py-1.5 px-3 rounded-lg text-xs mt-1.5 flex items-center gap-1.5 font-bold text-center">
-                  <span className="text-[#CCFF00] font-mono animate-pulse">
-                    {timeRemaining.days}d {timeRemaining.hours}h {timeRemaining.minutes}m
-                  </span>
-                </div>
+                {activeLiveMatch ? (
+                   <div className="bg-red-500 border border-red-600 py-1.5 px-4 rounded-lg text-lg mt-1.5 flex items-center gap-1.5 font-bold text-center text-white shadow-[0_0_15px_rgba(239,68,68,0.4)]">
+                     <span>{activeLiveMatch.homeScore || 0}</span>
+                     <span>-</span>
+                     <span>{activeLiveMatch.awayScore || 0}</span>
+                   </div>
+                ) : (
+                   <div className="bg-slate-900 border border-slate-800 py-1.5 px-3 rounded-lg text-xs mt-1.5 flex items-center gap-1.5 font-bold text-center">
+                     <span className="text-[#CCFF00] font-mono animate-pulse">
+                       {timeRemaining.days}d {timeRemaining.hours}h {timeRemaining.minutes}m
+                     </span>
+                   </div>
+                )}
               </div>
 
               <div className="flex flex-col items-center">
                 <div className="w-14 h-14 rounded-full bg-slate-900 text-white font-black flex items-center justify-center text-xl border border-slate-700 shadow-md">
-                  LDU
+                  {activeLiveMatch ? getClubLogo(activeLiveMatch.awayTeamId) : "LDU"}
                 </div>
-                <span className="text-slate-100 text-sm font-extrabold max-w-[120px] truncate mt-2">L.D.U. Quito</span>
+                <span className="text-slate-100 text-sm font-extrabold max-w-[120px] truncate mt-2">
+                  {activeLiveMatch ? getClubName(activeLiveMatch.awayTeamId) : "L.D.U. Quito"}
+                </span>
                 <span className="text-[10px] text-slate-400 font-mono">Visitante</span>
               </div>
             </div>
@@ -295,11 +325,11 @@ export default function DashboardView({ clubs, players, matches, stadiums, onNav
             <div className="border-t border-slate-800 pt-4 grid grid-cols-2 lg:grid-cols-4 gap-2 text-xs">
               <div className="bg-slate-950 p-2.5 rounded-lg text-left">
                 <span className="text-[9px] font-mono text-slate-500 block">Sede</span>
-                <p className="font-semibold text-slate-300 mt-0.5 truncate">Estad. Monumental</p>
+                <p className="font-semibold text-slate-300 mt-0.5 truncate">{activeLiveMatch ? getStadiumName(activeLiveMatch.stadiumId) : "Estad. Monumental"}</p>
               </div>
               <div className="bg-slate-950 p-2.5 rounded-lg text-left">
                 <span className="text-[9px] font-mono text-slate-500 block">Árbitro Central</span>
-                <p className="font-semibold text-slate-300 mt-0.5 truncate">Guillermo Guerrero</p>
+                <p className="font-semibold text-slate-300 mt-0.5 truncate">{activeLiveMatch ? (activeLiveMatch.refereeAppointed || "Por Definir") : "Guillermo Guerrero"}</p>
               </div>
               <div className="bg-slate-950 p-2.5 rounded-lg text-left">
                 <span className="text-[9px] font-mono text-slate-500 block">Señal TV</span>
@@ -318,11 +348,19 @@ export default function DashboardView({ clubs, players, matches, stadiums, onNav
           <div className="bg-slate-950 border border-slate-850/60 rounded-xl p-4 mt-5 text-left">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-900 pb-2 mb-3">
               <div>
-                <span className="text-[10px] font-mono text-amber-400 uppercase font-bold">Simulador de Transmisión de Planillas</span>
-                <p className="text-[10px] text-slate-500">Prueba el flujo de transmisión de resultados arbitrales directo desde el estadio.</p>
+                <span className="text-[10px] font-mono text-amber-400 uppercase font-bold">
+                  {activeLiveMatch ? "Transmisión Oficial de Planillas (EN VIVO)" : "Simulador de Transmisión de Planillas"}
+                </span>
+                <p className="text-[10px] text-slate-500">
+                  {activeLiveMatch ? "Recibiendo datos criptográficos directamente desde el estadio..." : "Prueba el flujo de transmisión de resultados arbitrales directo desde el estadio."}
+                </p>
               </div>
               <div className="flex items-center gap-1">
-                {!isSimulatingGame ? (
+                {activeLiveMatch ? (
+                  <span className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500/20 text-emerald-400 font-extrabold rounded text-[10px] border border-emerald-500/30">
+                    <Check size={10} /> Conexión Segura
+                  </span>
+                ) : !isSimulatingGame ? (
                   <button 
                     onClick={startSimulation}
                     className="flex items-center gap-1 px-3 py-1.5 bg-[#CCFF00] text-slate-950 font-extrabold rounded text-[10px] hover:bg-[#b0dc00] transition active:scale-95"
@@ -345,25 +383,29 @@ export default function DashboardView({ clubs, players, matches, stadiums, onNav
               <div className="flex flex-col justify-between space-y-2">
                 <div className="flex justify-between items-center bg-slate-900 p-3 rounded-lg border border-slate-850">
                   <div className="text-left">
-                    <span className="text-[9px] font-mono text-[#CCFF00]">MINUTO REA-TIME</span>
-                    <p className="text-xl font-bold font-mono mt-0.5">{simMinutes}' <span className="text-xs text-slate-400 font-normal">Fase 1</span></p>
+                    <span className="text-[9px] font-mono text-[#CCFF00]">{activeLiveMatch ? "TIEMPO TRANSCURRIDO" : "MINUTO REA-TIME"}</span>
+                    <p className="text-xl font-bold font-mono mt-0.5">{activeLiveMatch ? "En Curso" : `${simMinutes}'`} <span className="text-xs text-slate-400 font-normal">{activeLiveMatch ? "" : "Fase 1"}</span></p>
                   </div>
                   <div className="text-right">
-                    <span className="text-[9px] font-mono text-slate-500 block">MARCADOR DEMO</span>
-                    <p className="text-lg font-black font-mono mt-0.5 text-slate-200">{simScoreHome} - {simScoreAway}</p>
+                    <span className="text-[9px] font-mono text-slate-500 block">{activeLiveMatch ? "MARCADOR OFICIAL" : "MARCADOR DEMO"}</span>
+                    <p className="text-lg font-black font-mono mt-0.5 text-slate-200">
+                      {activeLiveMatch ? `${activeLiveMatch.homeScore || 0} - ${activeLiveMatch.awayScore || 0}` : `${simScoreHome} - ${simScoreAway}`}
+                    </p>
                   </div>
                 </div>
                 <div className="text-[9px] text-slate-500 font-sans leading-relaxed">
-                  *Esta simulación ejemplifica cómo los asistentes de mesa cargan los datos y el linspector los ratifica para emitir las planillas que se ven abajo.
+                  {activeLiveMatch ? "Transmisión encriptada bajo la red privada de LigaPro VOR. El árbitro central aprueba los cambios en tiempo real." : "*Esta simulación ejemplifica cómo los asistentes de mesa cargan los datos y el linspector los ratifica para emitir las planillas que se ven abajo."}
                 </div>
               </div>
 
               {/* Simulation Feed */}
               <div className="bg-slate-900 rounded-lg p-2.5 h-24 overflow-y-auto border border-slate-850 text-[10px] font-mono space-y-1.5">
                 {simLog.length === 0 ? (
-                  <span className="text-slate-600 select-none block">Ninguna simulación activa. Presione 'Iniciar Demo' para emular eventos del Barcelona vs LDU.</span>
+                  <span className="text-slate-600 select-none block">
+                    {activeLiveMatch ? "Esperando actualización de marcadores desde la mesa de control..." : "Ninguna simulación activa. Presione 'Iniciar Demo' para emular eventos del Barcelona vs LDU."}
+                  </span>
                 ) : (
-                  simLog.map((log, i) => (
+                  [...simLog].reverse().map((log, i) => (
                     <div key={i} className="text-slate-300 border-l border-slate-800 pl-1.5">
                       {log}
                     </div>

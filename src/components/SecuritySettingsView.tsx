@@ -33,14 +33,62 @@ export default function SecuritySettingsView({ currentUser, onUpdateProfile }: S
   const [mfaSuccess, setMfaSuccess] = useState(false);
 
   // Active sessions controls
-  const [sessions, setSessions] = useState<ActiveSession[]>([
-    { id: "sess-1", browser: "Mozilla Firefox / Windows 11 (Guayaquil)", city: "Guayaquil", ip: "186.46.20.141", lastActive: "Ahora mismo (Activa)", isCurrent: true },
-    { id: "sess-2", browser: "Google Chrome / MacOS Big Sur (Quito)", city: "Quito", ip: "190.152.122.90", lastActive: "Hace 45 minutos", isCurrent: false },
-    { id: "sess-3", browser: "Safari / iPhone 15 Pro Max (Guayaquil)", city: "Guayaquil", ip: "186.46.22.100", lastActive: "Ayer, 14:32", isCurrent: false }
-  ]);
+  const [sessions, setSessions] = useState<ActiveSession[]>([]);
+
+  React.useEffect(() => {
+    // Determine real browser and OS
+    const ua = navigator.userAgent;
+    let browserName = "Navegador Desconocido";
+    if (ua.match(/edg/i)) browserName = "Microsoft Edge";
+    else if (ua.match(/chrome|chromium|crios/i)) browserName = "Google Chrome";
+    else if (ua.match(/firefox|fxios/i)) browserName = "Mozilla Firefox";
+    else if (ua.match(/safari/i)) browserName = "Apple Safari";
+    else if (ua.match(/opr\//i)) browserName = "Opera";
+
+    let osName = "Sistema Desconocido";
+    if (ua.indexOf("Win") !== -1) osName = "Windows";
+    else if (ua.indexOf("Mac") !== -1) osName = "MacOS";
+    else if (ua.indexOf("Linux") !== -1) osName = "Linux";
+    else if (ua.indexOf("Android") !== -1) osName = "Android";
+    else if (ua.indexOf("like Mac") !== -1) osName = "iOS";
+
+    const currentBrowserStr = `${browserName} / ${osName}`;
+    const generatedIp = "186." + Math.floor(Math.random() * 255) + "." + Math.floor(Math.random() * 255) + ".10"; // Simulated real IP as front-end can't read WAN IP directly without API
+
+    // Load saved sessions from persistent memory
+    const saved = localStorage.getItem("ligapro_auth_sessions");
+    let allSessions: ActiveSession[] = saved ? JSON.parse(saved) : [];
+
+    // Reset current flags
+    allSessions = allSessions.map(s => ({ ...s, isCurrent: false }));
+
+    // Check if current browser already exists in history
+    const existingIndex = allSessions.findIndex(s => s.browser.includes(browserName) && s.browser.includes(osName));
+    
+    if (existingIndex >= 0) {
+      allSessions[existingIndex].lastActive = "Ahora mismo (Activa)";
+      allSessions[existingIndex].isCurrent = true;
+      allSessions[existingIndex].ip = generatedIp; // Update IP
+    } else {
+      // Add new terminal
+      allSessions.unshift({
+        id: "sess-" + Date.now().toString(),
+        browser: currentBrowserStr,
+        city: "Conexión Local", // Geolocation normally requires API
+        ip: generatedIp,
+        lastActive: "Ahora mismo (Activa)",
+        isCurrent: true
+      });
+    }
+
+    setSessions(allSessions);
+    localStorage.setItem("ligapro_auth_sessions", JSON.stringify(allSessions));
+  }, []);
 
   const handleRevokeSession = (sessionId: string, city: string) => {
-    setSessions(sessions.filter(s => s.id !== sessionId));
+    const updatedSessions = sessions.filter(s => s.id !== sessionId);
+    setSessions(updatedSessions);
+    localStorage.setItem("ligapro_auth_sessions", JSON.stringify(updatedSessions));
     window.dispatchEvent(new CustomEvent('ligapro-notification', {
       detail: {
         text: `Sesión en terminal de ${city} revocada exitosamente`,

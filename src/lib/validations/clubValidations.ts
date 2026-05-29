@@ -3,7 +3,25 @@
  * Reglamento de Competiciones LIGAPRO
  */
 import type { ValidationResult } from './types';
-import type { ClubStaff, ClubEconomicApproval, Sanction } from '../../types';
+import type { ClubStaff, ClubEconomicApproval, Sanction, Player } from '../../types';
+
+/**
+ * VALIDACIÓN 1.6 — Mínimo de 7 jugadores (Art. 47)
+ * Un club no puede ser habilitado ni programar partidos si no tiene al menos 7 jugadores.
+ */
+export function validateClubMinPlayers(clubId: string, players: Player[]): ValidationResult {
+  const clubPlayers = players.filter(p => p.clubId === clubId);
+  if (clubPlayers.length < 7) {
+    return {
+      valid: false,
+      ruleCode: '1.6',
+      article: 'Art. 47',
+      message: `El club no cumple con el plantel mínimo de 7 jugadores requerido por el reglamento para su habilitación. Jugadores actuales: ${clubPlayers.length}. Registre más jugadores en la sección "Planteles".`,
+      details: { currentPlayers: clubPlayers.length, required: 7 }
+    };
+  }
+  return { valid: true, message: 'Plantel mínimo alcanzado.', ruleCode: '1.6', article: 'Art. 47' };
+}
 
 /**
  * VALIDACIÓN 1.1 — Médico obligatorio

@@ -21,7 +21,7 @@ import {
   Eye,
   Award
 } from "lucide-react";
-import { Club, Player } from "../types";
+import { Club, Player, Sanction } from "../types";
 
 interface SquadViewProps {
   clubs: Club[];
@@ -30,13 +30,15 @@ interface SquadViewProps {
   onAddPlayer?: (player: Omit<Player, 'id'>) => Promise<Player>;
   onUpdatePlayer?: (id: string, updates: Partial<Player>) => Promise<Player>;
   onDeletePlayer?: (id: string) => Promise<void>;
+  onAddSanction?: (sanction: Omit<Sanction, 'id'>) => Promise<Sanction>;
 }
 
-export default function SquadView({ clubs, players, onPlayersChange, onAddPlayer, onUpdatePlayer, onDeletePlayer }: SquadViewProps) {
+export default function SquadView({ clubs, players, onPlayersChange, onAddPlayer, onUpdatePlayer, onDeletePlayer, onAddSanction }: SquadViewProps) {
   // Filter states
   const [selectedClubId, setSelectedClubId] = useState<string>("barcelona-sc");
   const [searchTerm, setSearchTerm] = useState("");
   const [positionFilter, setPositionFilter] = useState<string>("Todos");
+  const [activeSerie, setActiveSerie] = useState<'A' | 'B'>('A');
   
   // Interactive state dialogs
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
@@ -58,12 +60,24 @@ export default function SquadView({ clubs, players, onPlayersChange, onAddPlayer
   const [newReqMedical, setNewReqMedical] = useState(true);
   const [newReqTransfer, setNewReqTransfer] = useState("Aprobado");
 
-  const selectedClub = clubs.find(c => c.id === selectedClubId) || clubs[0];
+  const displayedClubs = clubs.filter(c => c.serie === activeSerie || (!c.serie && activeSerie === 'A'));
+  
+  // Ensure selected club belongs to active serie, otherwise default to first available
+  const selectedClub = displayedClubs.find(c => c.id === selectedClubId) || displayedClubs[0];
+  
+  // When switching serie, we might need to update selectedClubId if it's invalid for this view,
+  // but it's handled safely by defaulting to displayedClubs[0] and rendering its players.
+  const activeSelectedClubId = selectedClub?.id || selectedClubId;
 
   const handleInscribeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName) {
       alert("Por favor escriba el nombre completo del jugador.");
+      return;
+    }
+    
+    if (newNumber < 1 || newNumber > 99) {
+      alert("Según el Reglamento de Competiciones (Art. 33), la numeración debe ser del 1 al 99 sin exceder dos dígitos.");
       return;
     }
 
@@ -177,6 +191,53 @@ export default function SquadView({ clubs, players, onPlayersChange, onAddPlayer
     }
   };
 
+  const handleOpenInscribeModal = () => {
+    if (selectedClub && selectedClub.economicApproved === false) {
+      alert(`[CONTROL ECONÓMICO]\n\nEl club ${selectedClub.name} mantiene obligaciones económicas pendientes o deudas vencidas.\nNo puede inscribir nuevos jugadores según el Reglamento de Control Económico.`);
+      return;
+    }
+    setShowInscribeModal(true);
+  };
+
+  const handleAddYellowCard = (player: Player) => {
+    const newCount = player.yellowCards + 1;
+    let nextStatus = player.status;
+    let isSuspendedNow = false;
+
+    if (newCount >= 5) {
+      nextStatus = "Suspendido";
+      isSuspendedNow = true;
+    }
+
+    const updatePromise = onUpdatePlayer 
+      ? onUpdatePlayer(player.id, { yellowCards: newCount, status: nextStatus as any })
+      : Promise.resolve().then(() => {
+          const updated = players.map(p => p.id === player.id ? { ...p, yellowCards: newCount, status: nextStatus as any } : p);
+          onPlayersChange(updated);
+          return updated.find(p => p.id === player.id) as Player;
+        });
+
+    updatePromise.then((updated) => {
+      if (selectedPlayer && selectedPlayer.id === player.id) {
+        setSelectedPlayer(updated);
+      }
+      if (isSuspendedNow && onAddSanction) {
+        onAddSanction({
+          targetType: "Jugador",
+          targetName: player.name,
+          clubName: selectedClub?.name || "Desconocido",
+          offense: "Acumulación de cinco (5) tarjetas amarillas en el torneo.",
+          severity: "Media",
+          fineUSD: 500,
+          matchesSuspended: 1,
+          dateEmitted: new Date().toISOString().split("T")[0],
+          resolved: false
+        }).catch(err => console.error("Error creating auto-sanction:", err));
+        alert(`¡Alerta! ${player.name} ha recibido su 5ta tarjeta amarilla.\nEl jugador ha sido suspendido automáticamente.`);
+      }
+    });
+  };
+
   // Apply automated bans and document checks dynamically
   const processedPlayers = players.map(p => {
     const isSuspended = p.redCards > 0 || p.yellowCards >= 5;
@@ -194,7 +255,7 @@ export default function SquadView({ clubs, players, onPlayersChange, onAddPlayer
     return { ...p, status: effectiveStatus as any };
   });
 
-  const currentClubPlayers = processedPlayers.filter(p => p.clubId === selectedClubId);
+  const currentClubPlayers = processedPlayers.filter(p => p.clubId === activeSelectedClubId);
 
   const filteredPlayers = currentClubPlayers.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -210,8 +271,22 @@ export default function SquadView({ clubs, players, onPlayersChange, onAddPlayer
       {/* View Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-slate-800 pb-4">
         <div>
-          <h1 className="text-xl font-bold font-sans text-white tracking-tight">Planteles de Fútbol Serie A</h1>
+          <h1 className="text-xl font-bold font-sans text-white tracking-tight">Planteles de Fútbol</h1>
           <p className="text-xs text-slate-400 mt-1 font-mono">Consola para la inscripción de futbolistas, pasaportes biométricos y auditoría de transferencias TMS / COMET.</p>
+        </div>
+        <div className="mt-4 sm:mt-0 flex gap-1 bg-slate-900 border border-slate-800 p-1 rounded-lg">
+          <button 
+            onClick={() => setActiveSerie('A')}
+            className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeSerie === 'A' ? 'bg-[#CCFF00] text-slate-950' : 'text-slate-400 hover:text-white'}`}
+          >
+            Serie A
+          </button>
+          <button 
+            onClick={() => setActiveSerie('B')}
+            className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeSerie === 'B' ? 'bg-[#CCFF00] text-slate-950' : 'text-slate-400 hover:text-white'}`}
+          >
+            Serie B
+          </button>
         </div>
       </div>
 
@@ -224,10 +299,10 @@ export default function SquadView({ clubs, players, onPlayersChange, onAddPlayer
             Selector de Equipos
           </h3>
           <div className="space-y-1">
-            {clubs.map((c) => {
+            {displayedClubs.map((c) => {
               const activeCount = processedPlayers.filter(p => p.clubId === c.id && p.status === "Habilitado").length;
               const totalCount = processedPlayers.filter(p => p.clubId === c.id).length;
-              const isSelected = selectedClubId === c.id;
+              const isSelected = activeSelectedClubId === c.id;
 
               return (
                 <button
@@ -356,7 +431,14 @@ export default function SquadView({ clubs, players, onPlayersChange, onAddPlayer
                     </div>
                     <div>
                       <span className="text-slate-500 text-[9px] block">T. Amarillas</span>
-                      <span className="text-slate-300 font-bold text-amber-400">{player.yellowCards}</span>
+                      <div className="flex items-center justify-center space-x-1">
+                        <span className="text-slate-300 font-bold text-amber-400">{player.yellowCards}</span>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleAddYellowCard(player); }}
+                          className="px-1 text-[8px] bg-slate-800 text-amber-400 hover:bg-amber-500 hover:text-slate-900 rounded transition-colors"
+                          title="Sumar 1 Tarjeta Amarilla"
+                        >+1</button>
+                      </div>
                     </div>
                     <div>
                       <span className="text-slate-500 text-[9px] block">T. Rojas</span>
@@ -390,7 +472,7 @@ export default function SquadView({ clubs, players, onPlayersChange, onAddPlayer
 
             {/* Simulated register card empty state trigger */}
             <div 
-              onClick={() => setShowInscribeModal(true)}
+              onClick={handleOpenInscribeModal}
               className="bg-slate-950 border-2 border-dashed border-slate-850 hover:border-slate-700 rounded-2xl p-6 flex flex-col items-center justify-center text-center cursor-pointer min-h-[160px] hover:translate-y-[-2px] transition-all"
             >
               <UserPlus size={28} className="text-[#CCFF00]" />
@@ -422,7 +504,7 @@ export default function SquadView({ clubs, players, onPlayersChange, onAddPlayer
               <div>
                 <span className="text-[9px] font-mono text-[#CCFF00] uppercase block">Inscribir nuevo jugador</span>
                 <h3 className="text-sm font-black text-slate-100 flex items-center gap-1.5">
-                  <UserPlus size={16} /> REGISTRO DE PLANILLA / SQUAD EN: {selectedClub.shortName}
+                  <UserPlus size={16} /> REGISTRO DE PLANILLA / SQUAD EN: {selectedClub?.shortName}
                 </h3>
               </div>
               <button 

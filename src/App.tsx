@@ -99,7 +99,7 @@ export default function App() {
   }, [setPlayers]);
   const { matches, setMatches, add: addMatch, update: updateMatch, remove: removeMatch } = useMatches(initialMatches);
   const { sanctions, setSanctions, add: addSanction, update: updateSanction } = useSanctions(initialSanctions);
-  const { stadiums, setStadiums, update: updateStadium } = useStadiums(initialStadiums);
+  const { stadiums, setStadiums, add: addStadium, update: updateStadium, remove: removeStadium } = useStadiums(initialStadiums);
   const { postponements, add: addPostponement, update: updatePostponement } = usePostponements([
     {
       id: "POST-102",
@@ -184,6 +184,7 @@ export default function App() {
         return (
           <ClubsView
             clubs={clubs}
+            players={players}
             onClubsChange={setClubs}
             onAddClub={addClub}
             onUpdateClub={updateClub}
@@ -237,6 +238,7 @@ export default function App() {
             onAddPlayer={addPlayer}
             onUpdatePlayer={updatePlayer}
             onDeletePlayer={removePlayer}
+            onAddSanction={addSanction}
           />
         );
       case "disciplina":
@@ -254,6 +256,7 @@ export default function App() {
             matches={matches}
             clubs={clubs}
             stadiums={stadiums}
+            players={players}
             onMatchesChange={setMatches}
             onAddMatch={addMatch}
             onUpdateMatch={updateMatch}
@@ -285,6 +288,8 @@ export default function App() {
             stadiums={stadiums}
             onStadiumsChange={setStadiums}
             onUpdateStadium={updateStadium}
+            onAddStadium={addStadium}
+            onDeleteStadium={removeStadium}
           />
         );
       case "security":

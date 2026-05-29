@@ -19,6 +19,8 @@ export interface Club {
     registroLigaPro: boolean;
   };
   squadCount: number;
+  serie?: 'A' | 'B';
+  economicApproved?: boolean; // Control Financiero (True = Al día, False = Deudas)
 }
 
 // ─── Staff del Club (Médicos, DT, Cuerpo Técnico) ──────────────────────────
@@ -126,6 +128,8 @@ export interface Match {
     transmisionTvOk: boolean;
     certificacionVarOk: boolean;
     balonerosOk: boolean;
+    pasabolasCount?: number;
+    pasabolasAgesOk?: boolean;
   };
 }
 
@@ -150,6 +154,8 @@ export interface Stadium {
   locationCoords: { lat: number; lng: number };
   varCertified: boolean;
   lastInspectionDate: string;
+  grassHeight?: number; // 20-25mm
+  fifaQualityPro?: boolean;
 }
 
 export interface SystemUser {

@@ -16,7 +16,6 @@ import {
   Zap,
   Award,
   Target,
-  Target,
   Activity,
   X,
   Gamepad2
