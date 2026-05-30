@@ -27,7 +27,7 @@ function mapRowToSanction(row: any): Sanction {
 export async function getSanctions(): Promise<Sanction[]> {
   const { data, error } = await supabase
     .from('sanctions')
-    .select('*')
+    .select('id, target_type, target_name, club_name, offense, severity, fine_usd, matches_suspended, date_emitted, resolved, appellant_comment, appeal_date, appeal_status, resolution_comment, end_date')
     .order('date_emitted', { ascending: false });
   if (error) throw error;
   return (data ?? []).map(mapRowToSanction);

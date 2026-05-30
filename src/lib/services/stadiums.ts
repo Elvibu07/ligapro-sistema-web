@@ -22,7 +22,7 @@ function mapRowToStadium(row: any): Stadium {
 export async function getStadiums(): Promise<Stadium[]> {
   const { data, error } = await supabase
     .from('stadiums')
-    .select('*')
+    .select('id, name, city, altitude, capacity, lighting_lux, grass_type, vor_connectivity, lat, lng, var_certified, last_inspection_date, grass_height, fifa_quality_pro')
     .order('name');
   if (error) throw error;
   return (data ?? []).map(mapRowToStadium);

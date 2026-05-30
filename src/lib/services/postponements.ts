@@ -32,7 +32,7 @@ function mapRequestToRow(req: Omit<PostponementRequest, 'id'> & { id?: string })
 export async function getPostponements(): Promise<PostponementRequest[]> {
   const { data, error } = await supabase
     .from('postponements')
-    .select('*')
+    .select('id, match_id, original_label, reason, proposed_date, proposed_time, file_name, status, date_requested')
     .order('created_at', { ascending: false });
   if (error) throw error;
   return (data ?? []).map(mapRowToRequest);

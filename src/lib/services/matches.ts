@@ -60,7 +60,7 @@ function mapMatchToRow(match: Omit<Match, 'id'> & { id?: string }) {
 export async function getMatches(): Promise<Match[]> {
   const { data, error } = await supabase
     .from('matches')
-    .select('*')
+    .select('id, home_team_id, away_team_id, stadium_id, date, time, status, home_score, away_score, round, tv_channel, referee_appointed, serie, phase, total_rounds_in_phase, seguridad_ok, ambulancia_ok, transmision_tv_ok, certificacion_var_ok, baloneros_ok, pasabolas_count, pasabolas_ages_ok')
     .order('date', { ascending: true });
   if (error) throw error;
   return (data ?? []).map(mapRowToMatch);

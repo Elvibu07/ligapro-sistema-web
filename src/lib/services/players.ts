@@ -56,7 +56,10 @@ function mapPlayerToRow(player: Omit<Player, 'id'> & { id?: string }) {
 }
 
 export async function getPlayers(clubId?: string): Promise<Player[]> {
-  let query = supabase.from('players').select('*').order('name');
+  let query = supabase
+    .from('players')
+    .select('id, club_id, name, number, position, nationality, birth_date, status, shirt_number, matches_played, yellow_cards, red_cards, goals, contract_until, image, height, weight, photo_id, contract_signed, medical_certificate, transfer_certificate')
+    .order('name');
   if (clubId) query = query.eq('club_id', clubId);
   const { data, error } = await query;
   if (error) throw error;

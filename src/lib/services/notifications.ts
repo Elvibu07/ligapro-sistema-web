@@ -13,7 +13,7 @@ export async function getNotifications(): Promise<DBNotification[]> {
   try {
     const { data, error } = await supabase
       .from('notifications')
-      .select('*')
+      .select('id, text, read, type, view, created_at')
       .order('created_at', { ascending: false });
     if (error) throw error;
     return data ?? [];

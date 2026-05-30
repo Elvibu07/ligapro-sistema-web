@@ -49,7 +49,7 @@ function mapClubToRow(club: Omit<Club, 'id'> & { id?: string }) {
 export async function getClubs(): Promise<Club[]> {
   const { data, error } = await supabase
     .from('clubs')
-    .select('*')
+    .select('id, name, short_name, slug, founded, city, stadium, status, legal_representative, contact_email, logo, estatutos, solvencia, ministerio_deporte, registro_ligapro, squad_count')
     .order('name');
   if (error) throw error;
   return (data ?? []).map(mapRowToClub);
